@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer as supabase } from '../../../../../lib/supabase-server.js';
+import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
 
 /**
  * GET /api/segments/[id]/audio
@@ -7,6 +7,7 @@ import { supabaseServer as supabase } from '../../../../../lib/supabase-server.j
  */
 export async function GET(request, { params }) {
   try {
+    const supabase = getSupabaseServer();
     // Get segment file path
     const { data: segment, error: segmentError } = await supabase
       .from('segments')

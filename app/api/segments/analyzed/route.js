@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '../../../../lib/supabase-server.js';
+import { getSupabaseServer } from '../../../../lib/supabase-server.js';
 
 /**
  * GET /api/segments/analyzed
@@ -10,7 +10,7 @@ import { supabaseServer } from '../../../../lib/supabase-server.js';
  */
 export async function GET(request) {
   try {
-    const supabase = supabaseServer;
+    const supabase = getSupabaseServer();
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100');

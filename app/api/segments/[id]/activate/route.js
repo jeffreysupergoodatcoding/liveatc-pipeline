@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer as supabase } from '../../../../../lib/supabase-server.js';
+import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
 
 /**
  * POST /api/segments/[id]/activate
@@ -7,6 +7,7 @@ import { supabaseServer as supabase } from '../../../../../lib/supabase-server.j
  */
 export async function POST(request, { params }) {
   try {
+    const supabase = getSupabaseServer();
     const body = await request.json();
     const { active } = body;
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '../../../../lib/supabase-server.js';
+import { getSupabaseServer } from '../../../../lib/supabase-server.js';
 
 /**
  * GET /api/segments/active
@@ -10,7 +10,7 @@ import { supabaseServer } from '../../../../lib/supabase-server.js';
  */
 export async function GET(request) {
   try {
-    const supabase = supabaseServer;
+    const supabase = getSupabaseServer();
 
     const { data, error } = await supabase
       .from('segments')

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer as supabase } from '../../../../../lib/supabase-server.js';
+import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
 
 /**
  * PATCH /api/segments/[id]/review
@@ -14,6 +14,7 @@ import { supabaseServer as supabase } from '../../../../../lib/supabase-server.j
  */
 export async function PATCH(request, { params }) {
   try {
+    const supabase = getSupabaseServer();
     const { reviewed, reviewNotes, reviewedBy } = await request.json();
 
     const updates = {
@@ -50,6 +51,7 @@ export async function PATCH(request, { params }) {
  */
 export async function GET(request, { params }) {
   try {
+    const supabase = getSupabaseServer();
     const { data, error } = await supabase
       .from('segments')
       .select('reviewed, reviewed_at, review_notes, reviewed_by')

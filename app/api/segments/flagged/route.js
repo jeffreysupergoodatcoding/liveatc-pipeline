@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer as supabase } from '../../../../lib/supabase-server.js';
+import { getSupabaseServer } from '../../../../lib/supabase-server.js';
 
 /**
  * GET /api/segments/flagged
@@ -14,6 +14,7 @@ import { supabaseServer as supabase } from '../../../../lib/supabase-server.js';
  */
 export async function GET(request) {
   try {
+    const supabase = getSupabaseServer();
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const minScore = searchParams.get('minScore');

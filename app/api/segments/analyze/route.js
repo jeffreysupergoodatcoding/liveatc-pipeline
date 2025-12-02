@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '../../../../lib/supabase-server.js';
+import { getSupabaseServer } from '../../../../lib/supabase-server.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
  */
 export async function POST(request) {
   try {
-    const supabase = supabaseServer;
+    const supabase = getSupabaseServer();
 
     // Get count of active segments
     const { data: activeSegments, error } = await supabase

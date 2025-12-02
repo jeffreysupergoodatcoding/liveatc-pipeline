@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { EdgeCaseDetector } from '../../../../backend/services/detection/EdgeCaseDetector.js';
-import { supabaseServer as supabase } from '../../../../lib/supabase-server.js';
+import { getSupabaseServer } from '../../../../lib/supabase-server.js';
 import path from 'path';
 import os from 'os';
 import { promises as fs } from 'fs';
@@ -52,6 +52,7 @@ export async function POST(request) {
       }
 
       // Get segment from database
+      const supabase = getSupabaseServer();
       const { data: segment, error } = await supabase
         .from('segments')
         .select('file_path')
@@ -121,6 +122,7 @@ export async function POST(request) {
  * Save detection results to database
  */
 async function saveDetectionResults(segmentId, detectionResult) {
+  const supabase = getSupabaseServer();
   // Update segment with detection results
   const { error: segmentError } = await supabase
     .from('segments')
