@@ -1,0 +1,641 @@
+{
+  "version": "1.0.0",
+  "description": "Comprehensive aviation edge case taxonomy based on NASA ASRS incident patterns and FAA safety data",
+  "last_updated": "2025-01-20",
+  "categories": {
+    "safety_critical": {
+      "name": "Safety-Critical Incidents",
+      "description": "Immediate safety threats requiring urgent attention",
+      "severity": "critical",
+      "cases": [
+        {
+          "id": "SC-001",
+          "name": "Runway Incursion - Unauthorized Entry",
+          "description": "Aircraft or vehicle enters runway without clearance",
+          "keywords": ["cross", "runway", "without clearance", "entered runway", "on the runway"],
+          "required_context": ["runway identifier", "crossing instruction"],
+          "phraseology_patterns": ["cross runway", "hold short"],
+          "audio_signatures": {
+            "urgency_indicators": ["immediate", "stop", "hold position", "say again"],
+            "overlapping_transmissions": true
+          },
+          "detection_rules": {
+            "missing_clearance": "crossing mentioned without 'cleared to cross'",
+            "hold_short_violation": "movement indication after 'hold short' instruction"
+          },
+          "severity_score": 1.0,
+          "references": ["ASRS Runway Incursion Report Set"]
+        },
+        {
+          "id": "SC-002",
+          "name": "Runway Incursion - Failed to Hold Short",
+          "description": "Pilot fails to hold short of runway as instructed (27% of runway incursions)",
+          "keywords": ["hold short", "runway", "crossing", "stopped"],
+          "required_elements": ["runway identifier", "hold short instruction"],
+          "detection_rules": {
+            "missing_readback": "hold short instruction without pilot readback",
+            "incorrect_readback": "pilot reads back different runway number"
+          },
+          "severity_score": 0.95,
+          "references": ["FAA Runway Incursion Study 2016"]
+        },
+        {
+          "id": "SC-003",
+          "name": "Traffic Conflict - TCAS RA",
+          "description": "Traffic Collision Avoidance System Resolution Advisory",
+          "keywords": ["TCAS", "RA", "resolution advisory", "traffic alert", "climb climb", "descend descend"],
+          "emergency_indicators": true,
+          "audio_signatures": {
+            "urgent_tone": true,
+            "rapid_speech": true
+          },
+          "severity_score": 1.0
+        },
+        {
+          "id": "SC-004",
+          "name": "Altitude Deviation - Unauthorized",
+          "description": "Aircraft deviates from assigned altitude without clearance",
+          "keywords": ["altitude", "leaving", "climbing", "descending", "returning to"],
+          "phraseology_patterns": ["maintain", "climb and maintain", "descend and maintain"],
+          "detection_rules": {
+            "conflicting_altitudes": "altitude change without clearance",
+            "readback_error": "pilot reads back different altitude than cleared"
+          },
+          "severity_score": 0.9
+        },
+        {
+          "id": "SC-005",
+          "name": "Wrong Runway - Lineup/Takeoff",
+          "description": "Aircraft lines up or takes off from wrong runway",
+          "keywords": ["runway", "lineup", "position and hold", "cleared for takeoff", "wrong runway"],
+          "detection_rules": {
+            "runway_mismatch": "different runway in clearance vs readback",
+            "confirmation_question": "ATC asks 'which runway'"
+          },
+          "severity_score": 0.95
+        },
+        {
+          "id": "SC-006",
+          "name": "Go-Around - Late/Unsafe",
+          "description": "Go-around initiated late or in unsafe conditions",
+          "keywords": ["go around", "going around", "unable to land", "breaking off approach"],
+          "audio_signatures": {
+            "urgent_tone": true,
+            "background_alarms": true
+          },
+          "severity_score": 0.85
+        },
+        {
+          "id": "SC-007",
+          "name": "Near Midair Collision",
+          "description": "Aircraft come dangerously close to collision",
+          "keywords": ["traffic", "in sight", "avoiding", "evasive action", "near miss"],
+          "emergency_indicators": true,
+          "severity_score": 1.0
+        },
+        {
+          "id": "SC-008",
+          "name": "Taxiway Incursion",
+          "description": "Unauthorized taxiway entry or conflict",
+          "keywords": ["taxiway", "hold short", "cross", "give way"],
+          "detection_rules": {
+            "missed_instruction": "taxi instruction not read back",
+            "wrong_taxiway": "different taxiway identifier in readback"
+          },
+          "severity_score": 0.7
+        },
+        {
+          "id": "SC-009",
+          "name": "Emergency Descent",
+          "description": "Rapid unplanned descent due to pressurization or other emergency",
+          "keywords": ["emergency descent", "rapid descent", "cabin pressure", "oxygen masks"],
+          "emergency_indicators": true,
+          "severity_score": 1.0
+        },
+        {
+          "id": "SC-010",
+          "name": "Loss of Separation",
+          "description": "Aircraft lose required separation minima",
+          "keywords": ["separation", "traffic", "turn immediately", "expedite", "stop descent"],
+          "audio_signatures": {
+            "urgent_tone": true,
+            "controller_intervention": true
+          },
+          "severity_score": 0.95
+        }
+      ]
+    },
+    "emergency_declarations": {
+      "name": "Emergency Declarations",
+      "description": "Formal emergency and urgency declarations",
+      "severity": "critical",
+      "cases": [
+        {
+          "id": "EM-001",
+          "name": "Mayday Declaration",
+          "description": "Distress condition threatening immediate safety",
+          "keywords": ["mayday", "mayday mayday mayday"],
+          "required_elements": ["aircraft callsign", "nature of emergency"],
+          "audio_signatures": {
+            "urgent_tone": true,
+            "stressed_voice": true
+          },
+          "severity_score": 1.0,
+          "references": ["ICAO Annex 10"]
+        },
+        {
+          "id": "EM-002",
+          "name": "Pan-Pan Declaration",
+          "description": "Urgency condition affecting safety but not immediate distress",
+          "keywords": ["pan pan", "pan pan pan pan"],
+          "severity_score": 0.9,
+          "references": ["ICAO Annex 10"]
+        },
+        {
+          "id": "EM-003",
+          "name": "Minimum Fuel",
+          "description": "Aircraft declares minimum fuel state",
+          "keywords": ["minimum fuel", "min fuel", "fuel critical"],
+          "severity_score": 0.85
+        },
+        {
+          "id": "EM-004",
+          "name": "Emergency Fuel",
+          "description": "Aircraft declares emergency due to fuel state",
+          "keywords": ["emergency fuel", "fuel emergency", "declaring emergency", "fuel"],
+          "severity_score": 0.95
+        },
+        {
+          "id": "EM-005",
+          "name": "Medical Emergency",
+          "description": "Onboard medical emergency requiring priority handling",
+          "keywords": ["medical emergency", "passenger ill", "heart attack", "priority landing"],
+          "severity_score": 0.8
+        },
+        {
+          "id": "EM-006",
+          "name": "Engine Failure",
+          "description": "Engine failure or shutdown",
+          "keywords": ["engine failure", "engine out", "single engine", "shut down engine"],
+          "severity_score": 0.9
+        },
+        {
+          "id": "EM-007",
+          "name": "Fire Onboard",
+          "description": "Fire detected on aircraft",
+          "keywords": ["fire", "smoke", "burning smell", "fire warning"],
+          "emergency_indicators": true,
+          "severity_score": 1.0
+        },
+        {
+          "id": "EM-008",
+          "name": "Pressurization Failure",
+          "description": "Loss of cabin pressurization",
+          "keywords": ["depressurization", "cabin pressure", "pressure loss", "oxygen"],
+          "severity_score": 0.95
+        },
+        {
+          "id": "EM-009",
+          "name": "Hydraulic Failure",
+          "description": "Hydraulic system failure",
+          "keywords": ["hydraulic", "brakes", "landing gear", "system failure"],
+          "severity_score": 0.85
+        }
+      ]
+    },
+    "readback_errors": {
+      "name": "Readback Errors",
+      "description": "Incorrect or missing readbacks (33% involve speed instructions)",
+      "severity": "high",
+      "cases": [
+        {
+          "id": "RB-001",
+          "name": "Altitude Readback Error",
+          "description": "Pilot reads back incorrect altitude (most dangerous error type)",
+          "keywords": ["maintain", "climb", "descend", "altitude", "flight level"],
+          "detection_rules": {
+            "number_mismatch": "altitude numbers don't match clearance",
+            "similar_sounding": "potential homophone confusion (e.g., 'five' vs 'nine')"
+          },
+          "severity_score": 0.95,
+          "references": ["Subang Airport B747 CFIT 1989"]
+        },
+        {
+          "id": "RB-002",
+          "name": "Speed Readback Error",
+          "description": "Incorrect speed readback (33% of readback errors)",
+          "keywords": ["maintain", "speed", "knots", "mach"],
+          "detection_rules": {
+            "number_mismatch": "speed value doesn't match clearance"
+          },
+          "severity_score": 0.7,
+          "references": ["FAA OAMTECHREP 200625"]
+        },
+        {
+          "id": "RB-003",
+          "name": "Heading Readback Error",
+          "description": "Incorrect heading readback",
+          "keywords": ["turn", "heading", "fly heading", "degrees"],
+          "detection_rules": {
+            "number_mismatch": "heading numbers don't match"
+          },
+          "severity_score": 0.75
+        },
+        {
+          "id": "RB-004",
+          "name": "Runway Readback Error",
+          "description": "Incorrect runway number in readback",
+          "keywords": ["runway", "cleared to land", "line up and wait", "cleared for takeoff"],
+          "detection_rules": {
+            "runway_mismatch": "runway identifier doesn't match clearance"
+          },
+          "severity_score": 0.95
+        },
+        {
+          "id": "RB-005",
+          "name": "Frequency Readback Error",
+          "description": "Incorrect frequency in readback",
+          "keywords": ["contact", "frequency", "over to", "switch to"],
+          "detection_rules": {
+            "frequency_mismatch": "frequency numbers don't match"
+          },
+          "severity_score": 0.6
+        },
+        {
+          "id": "RB-006",
+          "name": "Callsign Confusion",
+          "description": "Similar callsigns causing confusion or wrong aircraft responding",
+          "keywords": ["callsign", "confirm", "were you calling", "standby"],
+          "detection_rules": {
+            "similar_callsigns": "multiple aircraft with similar callsigns present",
+            "wrong_response": "aircraft responds to wrong callsign"
+          },
+          "severity_score": 0.8
+        },
+        {
+          "id": "RB-007",
+          "name": "Missing Readback",
+          "description": "Pilot fails to read back critical clearance",
+          "keywords": ["hold short", "cross", "cleared to land", "cleared for takeoff"],
+          "detection_rules": {
+            "no_acknowledgment": "clearance given but no readback follows"
+          },
+          "severity_score": 0.85
+        },
+        {
+          "id": "RB-008",
+          "name": "Partial Readback",
+          "description": "Incomplete readback missing critical elements",
+          "keywords": ["roger", "wilco", "affirm"],
+          "detection_rules": {
+            "incomplete_elements": "readback missing altitude, heading, or runway"
+          },
+          "severity_score": 0.7
+        },
+        {
+          "id": "RB-009",
+          "name": "Hearback Error - Controller Miss",
+          "description": "Controller fails to catch incorrect readback",
+          "detection_rules": {
+            "incorrect_readback_accepted": "pilot reads back wrong information, controller doesn't correct"
+          },
+          "severity_score": 0.9
+        }
+      ]
+    },
+    "communication_failures": {
+      "name": "Communication Failures",
+      "description": "Radio communication problems and transmission issues",
+      "severity": "medium",
+      "cases": [
+        {
+          "id": "CF-001",
+          "name": "Stepped-On Transmission",
+          "description": "Multiple transmissions overlap, blocking communication",
+          "audio_signatures": {
+            "overlapping_speech": true,
+            "multiple_speakers": true,
+            "carrier_squelch": true
+          },
+          "keywords": ["say again", "blocked", "stepped on"],
+          "severity_score": 0.6
+        },
+        {
+          "id": "CF-002",
+          "name": "Garbled Transmission",
+          "description": "Transmission unintelligible or severely distorted",
+          "audio_signatures": {
+            "low_clarity": true,
+            "high_noise": true,
+            "distortion": true
+          },
+          "keywords": ["say again", "unreadable", "garbled", "broken"],
+          "severity_score": 0.65
+        },
+        {
+          "id": "CF-003",
+          "name": "Clarification Needed",
+          "description": "Pilot or controller requests clarification",
+          "keywords": ["say again", "confirm", "verify", "say intentions", "spell it out"],
+          "severity_score": 0.5
+        },
+        {
+          "id": "CF-004",
+          "name": "Radio Failure",
+          "description": "Complete loss of radio communication",
+          "keywords": ["NORDO", "lost comm", "radio failure", "comm out"],
+          "severity_score": 0.85
+        },
+        {
+          "id": "CF-005",
+          "name": "Frequency Congestion",
+          "description": "Excessive traffic on frequency causing delays",
+          "audio_signatures": {
+            "rapid_successive_transmissions": true,
+            "minimal_gaps": true
+          },
+          "keywords": ["standby", "frequency busy", "wait"],
+          "severity_score": 0.4
+        },
+        {
+          "id": "CF-006",
+          "name": "Wrong Frequency",
+          "description": "Aircraft or controller on incorrect frequency",
+          "keywords": ["wrong frequency", "not on this frequency", "contact", "switch"],
+          "severity_score": 0.55
+        },
+        {
+          "id": "CF-007",
+          "name": "Language Barrier",
+          "description": "Communication difficulty due to language proficiency",
+          "keywords": ["say again slowly", "spell out", "repeat", "understand"],
+          "audio_signatures": {
+            "slow_speech": true,
+            "heavy_accent": true,
+            "multiple_repeats": true
+          },
+          "severity_score": 0.7
+        }
+      ]
+    },
+    "phraseology_issues": {
+      "name": "Non-Standard Phraseology",
+      "description": "Deviation from standard aviation phraseology (biggest communication issue per NBAA survey)",
+      "severity": "medium",
+      "cases": [
+        {
+          "id": "PH-001",
+          "name": "Non-Standard Terminology",
+          "description": "Use of non-standard words or phrases",
+          "detection_rules": {
+            "casual_language": ["yeah", "yep", "nope", "okay", "sure", "thanks"],
+            "missing_standard_terms": "lacks standard phraseology elements"
+          },
+          "severity_score": 0.5,
+          "references": ["NASA ASRS DirectLine Issue 7"]
+        },
+        {
+          "id": "PH-002",
+          "name": "Missing Position Report Elements",
+          "description": "Incomplete position report",
+          "required_elements": ["position", "altitude", "next fix", "time"],
+          "detection_rules": {
+            "incomplete_report": "missing required elements"
+          },
+          "severity_score": 0.6
+        },
+        {
+          "id": "PH-003",
+          "name": "Ambiguous Instruction",
+          "description": "Unclear or ambiguous clearance or instruction",
+          "keywords": ["confirm", "did you mean", "unclear", "which"],
+          "severity_score": 0.7
+        },
+        {
+          "id": "PH-004",
+          "name": "Missing Callsign",
+          "description": "Transmission without proper callsign identification",
+          "detection_rules": {
+            "no_callsign": "transmission lacks aircraft identifier"
+          },
+          "severity_score": 0.65
+        },
+        {
+          "id": "PH-005",
+          "name": "Unclear Numbers",
+          "description": "Numbers not stated clearly using standard pronunciation",
+          "detection_rules": {
+            "rapid_numbers": "numbers spoken too quickly",
+            "unclear_pronunciation": "non-standard number pronunciation"
+          },
+          "severity_score": 0.55
+        },
+        {
+          "id": "PH-006",
+          "name": "Excessive Verbosity",
+          "description": "Unnecessarily long transmissions",
+          "audio_signatures": {
+            "long_duration": true,
+            "excessive_words": true
+          },
+          "severity_score": 0.4
+        },
+        {
+          "id": "PH-007",
+          "name": "Homophone Confusion",
+          "description": "Confusion between similar-sounding words/numbers",
+          "keywords": ["five", "nine", "to", "two", "for", "four"],
+          "detection_rules": {
+            "ambiguous_numbers": "five/nine, to/two confusion potential"
+          },
+          "severity_score": 0.75,
+          "references": ["Subang Airport B747 CFIT 1989"]
+        }
+      ]
+    },
+    "environmental_conditions": {
+      "name": "Environmental & Special Operations",
+      "description": "Weather, low visibility, and special procedure related issues",
+      "severity": "medium",
+      "cases": [
+        {
+          "id": "EN-001",
+          "name": "Low Visibility Operations",
+          "description": "Operations in low visibility conditions",
+          "keywords": ["CAT II", "CAT III", "low visibility", "RVR", "visibility"],
+          "severity_score": 0.7
+        },
+        {
+          "id": "EN-002",
+          "name": "Windshear Alert",
+          "description": "Windshear warning or report",
+          "keywords": ["windshear", "wind shear", "microburst", "go around"],
+          "severity_score": 0.85
+        },
+        {
+          "id": "EN-003",
+          "name": "Icing Conditions",
+          "description": "Aircraft icing reported or encountered",
+          "keywords": ["icing", "ice", "freezing", "anti-ice", "de-ice"],
+          "severity_score": 0.75
+        },
+        {
+          "id": "EN-004",
+          "name": "Turbulence Report",
+          "description": "Significant turbulence encountered",
+          "keywords": ["turbulence", "moderate", "severe", "extreme", "ride"],
+          "severity_score": 0.6
+        },
+        {
+          "id": "EN-005",
+          "name": "Weather Diversion",
+          "description": "Diversion due to weather",
+          "keywords": ["divert", "alternate", "weather", "unable", "minimum fuel"],
+          "severity_score": 0.7
+        },
+        {
+          "id": "EN-006",
+          "name": "Thunderstorm Deviation",
+          "description": "Deviation for thunderstorms or convective activity",
+          "keywords": ["deviate", "weather", "thunderstorm", "build-up", "around"],
+          "severity_score": 0.65
+        }
+      ]
+    },
+    "operational_issues": {
+      "name": "Operational Complexity",
+      "description": "High workload, confusion, and procedural issues",
+      "severity": "low",
+      "cases": [
+        {
+          "id": "OP-001",
+          "name": "High Workload Indication",
+          "description": "Signs of high controller or pilot workload",
+          "keywords": ["standby", "unable", "say again", "busy"],
+          "audio_signatures": {
+            "rapid_speech": true,
+            "stressed_voice": true,
+            "multiple_transmissions": true
+          },
+          "severity_score": 0.6
+        },
+        {
+          "id": "OP-002",
+          "name": "Airport Confusion",
+          "description": "Confusion about airport, gates, or parking",
+          "keywords": ["which gate", "wrong airport", "where", "confused"],
+          "severity_score": 0.5
+        },
+        {
+          "id": "OP-003",
+          "name": "Procedure Unfamiliarity",
+          "description": "Pilot unfamiliar with procedure or airport",
+          "keywords": ["unfamiliar", "first time", "not familiar", "help"],
+          "severity_score": 0.55
+        },
+        {
+          "id": "OP-004",
+          "name": "Complex Clearance",
+          "description": "Unusually complex clearance increasing error potential",
+          "detection_rules": {
+            "multiple_elements": "clearance contains >5 elements",
+            "multiple_changes": "multiple altitude/heading/speed changes"
+          },
+          "severity_score": 0.6,
+          "references": ["FAA OAMTECHREP 200625 - Complexity Study"]
+        },
+        {
+          "id": "OP-005",
+          "name": "Student Pilot",
+          "description": "Student pilot operations requiring extra attention",
+          "keywords": ["student pilot", "student", "first solo"],
+          "severity_score": 0.45
+        },
+        {
+          "id": "OP-006",
+          "name": "Unable to Comply",
+          "description": "Aircraft unable to comply with instruction",
+          "keywords": ["unable", "cannot", "negative", "unable to comply"],
+          "severity_score": 0.65
+        }
+      ]
+    },
+    "model_failure_modes": {
+      "name": "STT Model Failure Patterns",
+      "description": "Common speech-to-text transcription errors specific to aviation",
+      "severity": "low",
+      "cases": [
+        {
+          "id": "MF-001",
+          "name": "Number Transcription Error",
+          "description": "STT commonly confuses aviation numbers",
+          "detection_rules": {
+            "common_confusions": {
+              "five_nine": ["five", "niner"],
+              "to_two": ["to", "two"],
+              "for_four": ["for", "four"],
+              "tree_three": ["tree", "three"]
+            }
+          },
+          "severity_score": 0.7
+        },
+        {
+          "id": "MF-002",
+          "name": "Callsign Misrecognition",
+          "description": "Airline callsigns often misheard by STT",
+          "detection_rules": {
+            "missing_airline": "no recognizable airline callsign",
+            "wrong_airline": "callsign doesn't match known airlines"
+          },
+          "severity_score": 0.5
+        },
+        {
+          "id": "MF-003",
+          "name": "Aviation Jargon Miss",
+          "description": "STT fails to recognize aviation-specific terminology",
+          "keywords": ["ATIS", "METAR", "NOTAM", "TCAS", "GPWS", "VNAV"],
+          "severity_score": 0.4
+        },
+        {
+          "id": "MF-004",
+          "name": "Phonetic Alphabet Error",
+          "description": "NATO phonetic alphabet misrecognized",
+          "detection_rules": {
+            "phonetic_words": ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot"]
+          },
+          "severity_score": 0.45
+        },
+        {
+          "id": "MF-005",
+          "name": "Background Noise Interference",
+          "description": "Cockpit/tower background noise causing STT errors",
+          "audio_signatures": {
+            "high_background_noise": true,
+            "alarms": true,
+            "wind_noise": true
+          },
+          "severity_score": 0.5
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "total_cases": 57,
+    "sources": [
+      "NASA ASRS Database - Runway Incursion Report Set",
+      "FAA Runway Incursion Study 2016",
+      "FAA OAMTECHREP 200625 - Message Complexity Study",
+      "ICAO Annex 10 - Emergency Procedures",
+      "NASA ASRS DirectLine Issue 7 - Non-Standard Phraseology",
+      "Flight Safety Foundation - Communication Errors Study",
+      "NBAA Aviation Communications Survey",
+      "Subang Airport B747 CFIT Accident Report 1989"
+    ],
+    "severity_levels": {
+      "critical": "Immediate safety threat (score >= 0.85)",
+      "high": "Significant safety concern (score 0.70-0.84)",
+      "medium": "Operational safety issue (score 0.50-0.69)",
+      "low": "Minor issue or STT artifact (score < 0.50)"
+    }
+  }
+}

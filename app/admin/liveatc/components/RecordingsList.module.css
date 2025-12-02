@@ -1,0 +1,119 @@
+.container {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.refreshButton {
+  padding: 0.5rem 1rem;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
+
+.refreshButton:hover {
+  background-color: #0051cc;
+}
+
+.filters {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  gap: 1rem;
+}
+
+.select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.375rem;
+  background-color: white;
+  font-size: 0.875rem;
+}
+
+.loading,
+.empty {
+  padding: 3rem;
+  text-align: center;
+  color: #666;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background-color: #f9f9f9;
+}
+
+.table th {
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table td {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  color: #333;
+}
+
+.table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status.processing {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status.segmented {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.viewButton {
+  padding: 0.375rem 0.75rem;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.viewButton:hover {
+  background-color: #0051cc;
+}

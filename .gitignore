@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.env
+.env.local
+recordings/
+*.log
+dist/
+build/
+.DS_Store
+
+# Claude Code settings (may contain credentials)
+.claude/settings.local.json

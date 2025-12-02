@@ -1,0 +1,16 @@
+# Audio Analysis Dependencies
+librosa>=0.10.0
+pydub>=0.25.1
+webrtcvad>=2.0.10
+pyAudioAnalysis>=0.3.14
+
+# Supporting libraries
+numpy>=1.24.0
+scipy>=1.10.0
+soundfile>=0.12.0
+
+# Deepgram SDK
+deepgram-sdk>=3.0.0
+
+# Utilities
+python-dotenv>=1.0.0

@@ -1,0 +1,29 @@
+[
+  {
+    "feed": {
+      "airport": "KJFK",
+      "facility": "tower2",
+      "url": "http://d.liveatc.net/kjfk_twr3"
+    },
+    "startTime": "2025-11-24T16:54:39.499Z",
+    "status": "success",
+    "steps": {
+      "record": {
+        "status": "success",
+        "duration": 166535,
+        "outputPath": "/Users/jeffreysu/Desktop/project/liveatc-pipeline/recordings/raw/kjfk_twr2_20251124_175439.mp3"
+      },
+      "segment": {
+        "status": "success",
+        "duration": 1893,
+        "segmentCount": 10,
+        "outputDir": "/Users/jeffreysu/Desktop/project/liveatc-pipeline/recordings/segments/kjfk_twr2_20251124_175439"
+      },
+      "upload": {
+        "status": "success",
+        "duration": 12994
+      }
+    },
+    "totalDuration": 181430
+  }
+]

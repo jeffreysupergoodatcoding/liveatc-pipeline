@@ -1,0 +1,24 @@
+[
+  {
+    "feed": {
+      "airport": "KJFK",
+      "facility": "tower2",
+      "url": "http://d.liveatc.net/kjfk_twr3"
+    },
+    "startTime": "2025-11-19T17:31:49.514Z",
+    "status": "error",
+    "steps": {
+      "record": {
+        "status": "success",
+        "duration": 45894,
+        "outputPath": "/Users/jeffreysu/Desktop/project/liveatc-pipeline/recordings/raw/kjfk_twr2_20251119_183149.mp3"
+      },
+      "segment": {
+        "status": "started",
+        "startTime": 1763573555411
+      }
+    },
+    "error": "Failed to parse segment metadata",
+    "totalDuration": 46355
+  }
+]

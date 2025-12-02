@@ -1,0 +1,53 @@
+[
+  {
+    "id": "custom-001",
+    "name": "High Workload Communication",
+    "description": "Detects signs of high controller or pilot workload",
+    "conditions": {
+      "keywords": ["unable", "standby", "say again"],
+      "speech_rate": ">200",
+      "multiple_speakers": true
+    },
+    "priority": "medium",
+    "enabled": true,
+    "created_at": "2025-01-20T00:00:00Z",
+    "created_by": "system"
+  },
+  {
+    "id": "custom-002",
+    "name": "Rushed Clearance",
+    "description": "Detects unusually fast speech that may indicate rushed clearance delivery",
+    "conditions": {
+      "speech_rate": ">250",
+      "high_volume_variance": true
+    },
+    "priority": "high",
+    "enabled": true,
+    "created_at": "2025-01-20T00:00:00Z",
+    "created_by": "system"
+  },
+  {
+    "id": "custom-003",
+    "name": "Confusion Indicators",
+    "description": "Detects phrases indicating confusion or uncertainty",
+    "conditions": {
+      "keywords": ["confused", "not sure", "which", "where", "repeat", "clarify"]
+    },
+    "priority": "medium",
+    "enabled": true,
+    "created_at": "2025-01-20T00:00:00Z",
+    "created_by": "system"
+  },
+  {
+    "id": "custom-004",
+    "name": "Weather-Related Stress",
+    "description": "Detects weather-related operational stress",
+    "conditions": {
+      "keywords": ["weather", "deviation", "divert", "unable", "minimum fuel", "holding"]
+    },
+    "priority": "high",
+    "enabled": true,
+    "created_at": "2025-01-20T00:00:00Z",
+    "created_by": "system"
+  }
+]
