@@ -144,14 +144,28 @@ function SegmentDetails({ segment, onClose }) {
 
   async function fetchAudioUrl() {
     setLoadingAudio(true);
+    setAudioUrl(null); // Reset URL before fetching
     try {
+      console.log('Fetching audio for segment:', segment.id);
       const response = await fetch(`/api/segments/${segment.id}/audio`);
+      console.log('Audio API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Audio data received:', data);
+
       if (data.url) {
         setAudioUrl(data.url);
+        console.log('Audio URL set:', data.url);
+      } else {
+        console.error('No URL in response:', data);
       }
     } catch (error) {
       console.error('Error fetching audio URL:', error);
+      setAudioUrl(null);
     } finally {
       setLoadingAudio(false);
     }
@@ -238,15 +252,23 @@ function SegmentDetails({ segment, onClose }) {
         )}
 
         {/* Audio Playback */}
-        <section>
+        <section style={{ position: 'relative', zIndex: 10 }}>
           <h5>Audio</h5>
           {loadingAudio ? (
             <p className={styles.loadingAudio}>Loading audio...</p>
           ) : audioUrl ? (
-            <audio controls className={styles.audioPlayer} key={audioUrl}>
-              <source src={audioUrl} type="audio/mpeg" />
-              Your browser does not support audio playback.
-            </audio>
+            <div style={{ position: 'relative', zIndex: 10 }}>
+              <audio
+                controls
+                className={styles.audioPlayer}
+                key={audioUrl}
+                preload="metadata"
+                style={{ display: 'block', width: '100%' }}
+              >
+                <source src={audioUrl} type="audio/mpeg" />
+                Your browser does not support audio playback.
+              </audio>
+            </div>
           ) : (
             <p className={styles.noAudio}>Audio not available</p>
           )}

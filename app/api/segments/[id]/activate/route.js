@@ -8,6 +8,9 @@ import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
 export async function POST(request, { params }) {
   try {
     const supabase = getSupabaseServer();
+    // Await params in Next.js 14+
+    const { id } = await params;
+
     const body = await request.json();
     const { active } = body;
 
@@ -22,7 +25,7 @@ export async function POST(request, { params }) {
     const { data, error } = await supabase
       .from('segments')
       .update({ active })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 

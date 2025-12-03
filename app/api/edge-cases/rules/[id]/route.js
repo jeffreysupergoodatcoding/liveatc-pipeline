@@ -10,7 +10,9 @@ const ruleBuilder = new CustomRuleBuilder();
 export async function GET(request, { params }) {
   try {
     await ruleBuilder.initialize();
-    const rule = await ruleBuilder.getRuleById(params.id);
+    // Await params in Next.js 14+
+    const { id } = await params;
+    const rule = await ruleBuilder.getRuleById(id);
 
     if (!rule) {
       return NextResponse.json(
@@ -36,9 +38,11 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     await ruleBuilder.initialize();
+    // Await params in Next.js 14+
+    const { id } = await params;
     const updates = await request.json();
 
-    const rule = await ruleBuilder.updateRule(params.id, updates);
+    const rule = await ruleBuilder.updateRule(id, updates);
 
     return NextResponse.json(rule);
   } catch (error) {
@@ -57,7 +61,9 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await ruleBuilder.initialize();
-    const deleted = await ruleBuilder.deleteRule(params.id);
+    // Await params in Next.js 14+
+    const { id } = await params;
+    const deleted = await ruleBuilder.deleteRule(id);
 
     return NextResponse.json({
       message: 'Rule deleted successfully',

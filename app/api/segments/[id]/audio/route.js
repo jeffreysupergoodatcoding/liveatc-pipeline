@@ -8,11 +8,14 @@ import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
 export async function GET(request, { params }) {
   try {
     const supabase = getSupabaseServer();
+    // Await params in Next.js 14+
+    const { id } = await params;
+
     // Get segment file path
     const { data: segment, error: segmentError } = await supabase
       .from('segments')
       .select('file_path')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (segmentError || !segment) {

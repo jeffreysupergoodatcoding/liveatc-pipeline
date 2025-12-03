@@ -15,6 +15,9 @@ import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
 export async function PATCH(request, { params }) {
   try {
     const supabase = getSupabaseServer();
+    // Await params in Next.js 14+
+    const { id } = await params;
+
     const { reviewed, reviewNotes, reviewedBy } = await request.json();
 
     const updates = {
@@ -27,7 +30,7 @@ export async function PATCH(request, { params }) {
     const { data, error } = await supabase
       .from('segments')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -52,10 +55,13 @@ export async function PATCH(request, { params }) {
 export async function GET(request, { params }) {
   try {
     const supabase = getSupabaseServer();
+    // Await params in Next.js 14+
+    const { id } = await params;
+
     const { data, error } = await supabase
       .from('segments')
       .select('reviewed, reviewed_at, review_notes, reviewed_by')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) {
