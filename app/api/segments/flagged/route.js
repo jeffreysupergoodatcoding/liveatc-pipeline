@@ -7,7 +7,7 @@ import { getSupabaseServer } from '../../../../lib/supabase-server.js';
  *
  * Query params:
  * - category: filter by edge case category
- * - minScore: minimum edge case score
+ * - minScore: minimum audio analysis score
  * - reviewed: filter by review status (true/false)
  * - limit: number of results (default 100)
  * - offset: pagination offset (default 0)
@@ -26,12 +26,12 @@ export async function GET(request) {
     let query = supabase
       .from('flagged_segments_with_matches')
       .select('*')
-      .order('edge_case_score', { ascending: false })
+      .order('audio_analysis_score', { ascending: false })
       .range(offset, offset + limit - 1);
 
     // Apply filters
     if (minScore) {
-      query = query.gte('edge_case_score', parseFloat(minScore));
+      query = query.gte('audio_analysis_score', parseFloat(minScore));
     }
 
     if (reviewed !== null) {

@@ -183,8 +183,8 @@ function SegmentCard({ segment, selected, onClick }) {
           <span className={styles.date}>{new Date(segment.recorded_at).toLocaleString()}</span>
         </div>
         <div className={styles.scoreDisplay}>
-          <div className={styles.score} data-severity={getSeverityLevel(segment.edge_case_score)}>
-            {(segment.edge_case_score * 100).toFixed(0)}
+          <div className={styles.score} data-severity={getSeverityLevel(segment.audio_analysis_score || 0)}>
+            {((segment.audio_analysis_score || 0) * 100).toFixed(0)}
           </div>
         </div>
       </div>
@@ -253,22 +253,6 @@ function SegmentDetails({ segment, reviewMode, reviewNotes, onReviewNotesChange,
       </div>
 
       <div className={styles.detailsBody}>
-        {/* Edge Case Score */}
-        <section>
-          <h5>Edge Case Score</h5>
-          <div className={styles.scoreBar}>
-            <div
-              className={styles.scoreFill}
-              style={{ width: `${segment.edge_case_score * 100}%` }}
-              data-severity={getSeverityLevel(segment.edge_case_score)}
-            />
-          </div>
-          <div className={styles.scoreText}>
-            <span>{(segment.edge_case_score * 100).toFixed(1)}%</span>
-            <span className={styles.severityLabel}>{getSeverityLevel(segment.edge_case_score).toUpperCase()}</span>
-          </div>
-        </section>
-
         {/* Audio Analysis (Audio-First System) */}
         {segment.audio_analysis_score !== null && segment.audio_analysis_score !== undefined && (
           <section>
@@ -278,13 +262,13 @@ function SegmentDetails({ segment, reviewMode, reviewNotes, onReviewNotesChange,
                 <div
                   className={styles.scoreFill}
                   style={{ width: `${segment.audio_analysis_score * 100}%` }}
-                  data-severity={segment.audio_analysis_score >= 0.65 ? 'high' : 'low'}
+                  data-severity={getSeverityLevel(segment.audio_analysis_score)}
                 />
               </div>
               <div className={styles.scoreText}>
                 <span>{(segment.audio_analysis_score * 100).toFixed(1)}%</span>
                 <span className={styles.severityLabel}>
-                  {segment.audio_analysis_score >= 0.65 ? 'FLAGGED' : 'NORMAL'}
+                  {getSeverityLevel(segment.audio_analysis_score).toUpperCase()}
                 </span>
               </div>
 
