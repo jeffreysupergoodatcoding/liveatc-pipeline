@@ -1,11 +1,17 @@
--- Update flagged_segments_with_matches view to include audio-first fields
--- Fixed to work without edge_cases table
+-- Migration to add confidence scoring fields and update views
+-- Run this in the Supabase SQL Editor
 
--- Drop the existing view first
-DROP VIEW IF EXISTS flagged_segments_with_matches;
+-- 1. Add new columns to segments table
+ALTER TABLE segments
+  ADD COLUMN IF NOT EXISTS transcription_text TEXT,
+  ADD COLUMN IF NOT EXISTS transcription_confidence FLOAT CHECK (transcription_confidence >= 0 AND transcription_confidence <= 1),
+  ADD COLUMN IF NOT EXISTS needs_human_review BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS rlhf_candidate BOOLEAN DEFAULT FALSE;
 
--- Create the updated view with audio-first fields
-CREATE VIEW flagged_segments_with_matches AS
+-- 2. Create new flagged_segments_with_matches_v2 view (leaving original intact)
+-- DROP VIEW IF EXISTS flagged_segments_with_matches; -- Commented out to preserve existing view
+
+CREATE OR REPLACE VIEW flagged_segments_with_matches_v2 AS
 SELECT
     s.id,
     s.recording_id,
@@ -13,7 +19,6 @@ SELECT
     s.file_path,
     s.duration_seconds,
     s.transcription,
-    s.transcription_confidence,
     s.transcription_confidence,
     s.needs_human_review,
     s.rlhf_candidate,
@@ -61,4 +66,4 @@ JOIN recordings r ON s.recording_id = r.id
 WHERE s.flagged = TRUE
 ORDER BY s.edge_case_score DESC, s.created_at DESC;
 
-COMMENT ON VIEW flagged_segments_with_matches IS 'Flagged segments with all associated edge case matches and audio-first analysis data';
+COMMENT ON VIEW flagged_segments_with_matches_v2 IS 'Flagged segments V2 (Confidence Scoring) with all associated edge case matches and audio-first analysis data';

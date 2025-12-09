@@ -25,6 +25,24 @@ export async function GET(request, { params }) {
       );
     }
 
+    // Try public URL first (if bucket is public)
+    const { data: publicData } = supabase.storage
+      .from('liveatc-segments')
+      .getPublicUrl(segment.file_path);
+
+    if (publicData?.publicUrl) {
+      // Test if public URL works by checking if bucket is public
+      try {
+        const testResponse = await fetch(publicData.publicUrl, { method: 'HEAD' });
+        if (testResponse.ok) {
+          console.log('Using public URL');
+          return NextResponse.json({ url: publicData.publicUrl });
+        }
+      } catch (e) {
+        console.log('Public URL not accessible, trying signed URL');
+      }
+    }
+
     // Generate signed URL (valid for 1 hour)
     const { data, error } = await supabase.storage
       .from('liveatc-segments')

@@ -22,16 +22,20 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Use the pre-built view for better performance
+    // Query segments that need human review (confidence < 85%)
     let query = supabase
-      .from('flagged_segments_with_matches')
-      .select('*')
-      .order('audio_analysis_score', { ascending: false })
+      .from('segments')
+      .select(`
+        *,
+        recordings!inner(airport, facility, recorded_at)
+      `)
+      .eq('needs_human_review', true)
+      .order('transcription_confidence', { ascending: true })  // Show lowest confidence first
       .range(offset, offset + limit - 1);
 
     // Apply filters
     if (minScore) {
-      query = query.gte('audio_analysis_score', parseFloat(minScore));
+      query = query.gte('transcription_confidence', parseFloat(minScore));
     }
 
     if (reviewed !== null) {
@@ -44,17 +48,18 @@ export async function GET(request) {
       throw error;
     }
 
-    // Filter by category if specified (client-side filter since it's in JSONB)
-    let filteredData = data;
-    if (category) {
-      filteredData = data.filter(segment =>
-        segment.matches.some(match => match.category === category)
-      );
-    }
+    // Transform to flat structure
+    const flatSegments = data?.map(segment => ({
+      ...segment,
+      airport: segment.recordings.airport,
+      facility: segment.recordings.facility,
+      recorded_at: segment.recordings.recorded_at,
+      matches: []  // No edge case matches for confidence-based routing
+    })) || [];
 
     return NextResponse.json({
-      segments: filteredData,
-      count: filteredData.length,
+      segments: flatSegments,
+      count: flatSegments.length,
       total: count
     });
   } catch (error) {

@@ -53,7 +53,7 @@ export default function LiveATCAdmin() {
               setSelectedRecording(null);
             }}
           >
-            Edge Cases
+            Confidence Pipeline
           </button>
         </nav>
       </header>

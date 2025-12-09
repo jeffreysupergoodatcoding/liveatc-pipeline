@@ -222,6 +222,8 @@ export default function SegmentsList({ recording, onBack }) {
                 <th>#</th>
                 <th>Duration</th>
                 <th>Quality</th>
+                <th>Confidence</th>
+                <th>Routing</th>
                 <th>Size</th>
                 <th>Labels</th>
                 <th>Status</th>
@@ -232,6 +234,20 @@ export default function SegmentsList({ recording, onBack }) {
             <tbody>
               {segments.map(segment => {
                 const quality = formatQualityScore(segment.audio_quality_score);
+                const confidence = segment.transcription_confidence
+                  ? (segment.transcription_confidence * 100).toFixed(0) + '%'
+                  : '-';
+
+                let routingLabel = 'Pending';
+                let routingClass = styles.pending;
+                if (segment.rlhf_candidate) {
+                  routingLabel = 'RLHF';
+                  routingClass = styles.success;
+                } else if (segment.needs_human_review) {
+                  routingLabel = 'Review';
+                  routingClass = styles.warning;
+                }
+
                 return (
                   <tr
                     key={segment.id}
@@ -249,6 +265,12 @@ export default function SegmentsList({ recording, onBack }) {
                     <td>
                       <span className={`${styles.quality} ${styles[quality.color]}`}>
                         {quality.label}
+                      </span>
+                    </td>
+                    <td>{confidence}</td>
+                    <td>
+                      <span className={`${styles.routing} ${routingClass}`}>
+                        {routingLabel}
                       </span>
                     </td>
                     <td>{formatFileSize(segment.file_size_bytes)}</td>

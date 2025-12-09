@@ -89,8 +89,8 @@ export default function EdgeCasesDashboard() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h2>Edge Case Detection System</h2>
-        <p className={styles.subtitle}>Intelligent aviation communication analysis powered by AI</p>
+        <h2>Transcription Confidence Pipeline</h2>
+        <p className={styles.subtitle}>Intelligent transcription routing based on confidence scores</p>
       </div>
 
       <div className={styles.tabs}>
@@ -104,25 +104,13 @@ export default function EdgeCasesDashboard() {
           className={`${styles.tab} ${activeTab === 'analyzed' ? styles.active : ''}`}
           onClick={() => setActiveTab('analyzed')}
         >
-          Analyzed
+          High Confidence (RLHF)
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'flagged' ? styles.active : ''}`}
           onClick={() => setActiveTab('flagged')}
         >
-          Flagged (Edge Cases)
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'taxonomy' ? styles.active : ''}`}
-          onClick={() => setActiveTab('taxonomy')}
-        >
-          Taxonomy (57 Cases)
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'rules' ? styles.active : ''}`}
-          onClick={() => setActiveTab('rules')}
-        >
-          Custom Rules
+          Low Confidence (Human Review)
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'upload' ? styles.active : ''}`}
@@ -138,8 +126,6 @@ export default function EdgeCasesDashboard() {
         )}
         {activeTab === 'analyzed' && <AnalyzedSegments />}
         {activeTab === 'flagged' && <FlaggedSegments />}
-        {activeTab === 'taxonomy' && <TaxonomyViewer />}
-        {activeTab === 'rules' && <CustomRules />}
         {activeTab === 'upload' && <AudioUpload />}
       </div>
     </div>

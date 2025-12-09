@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { DeepgramProvider } from '../backend/services/transcription/DeepgramProvider.js';
 
 const execPromise = promisify(exec);
 
@@ -158,7 +159,23 @@ async function runKeywordDetection(audioPath) {
   }
 }
 
-// Removed: detectEdgeCases function - transcription disabled, audio analysis only
+async function transcribeAudio(audioPath) {
+  try {
+    const deepgram = new DeepgramProvider();
+    if (!deepgram.isConfigured()) {
+      console.warn('Deepgram not configured, skipping transcription');
+      return null;
+    }
+
+    const start = Date.now();
+    const result = await deepgram.transcribe(audioPath);
+    console.log(`     Transcription took ${Date.now() - start}ms`);
+    return result;
+  } catch (error) {
+    console.error('Transcription error:', error.message);
+    return null;
+  }
+}
 
 async function saveResults(segmentId, detectionResult, audioAnalysis = null, keywordDetection = null) {
   // Build update object
@@ -169,14 +186,6 @@ async function saveResults(segmentId, detectionResult, audioAnalysis = null, key
     updateData.audio_analysis_score = audioAnalysis.score;
     updateData.detected_patterns = audioAnalysis.patterns;
     updateData.audio_features = audioAnalysis.features;
-
-    // Clear any old transcription data (audio-only mode)
-    updateData.transcription = null;
-    updateData.transcription_confidence = null;
-    updateData.edge_case_score = null;
-    updateData.speaker_count = null;
-    updateData.flagged = false;
-    updateData.detected_edge_cases = null;
   }
 
   // Keyword detection results (if available)
@@ -211,12 +220,33 @@ async function saveResults(segmentId, detectionResult, audioAnalysis = null, key
 
   // Transcription results (if available)
   if (detectionResult) {
-    updateData.transcription = detectionResult.transcription.text;
-    updateData.transcription_confidence = detectionResult.transcription.confidence;
-    updateData.edge_case_score = detectionResult.edgeCaseScore;
-    updateData.speaker_count = detectionResult.transcription.speakerCount;
-    updateData.flagged = detectionResult.flagged;
-    updateData.detected_edge_cases = detectionResult.detectedEdgeCases;
+    updateData.transcription = detectionResult.text;
+    updateData.transcription_confidence = detectionResult.confidence;
+    updateData.speaker_count = detectionResult.speakerCount;
+    // edge_case_score, flagged, detected_edge_cases not updated here as we are using audio/keyword analysis for that now
+
+    // --- CONFIDENCE ROUTING LOGIC ---
+    // If transcription confidence is high enough, mark as candidate for RLHF.
+    // Otherwise, mark for human review (SFT).
+    const rlhfThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.85');
+    // We use the same threshold for decision boundary, but support separate ones if needed
+
+    if (detectionResult.confidence >= rlhfThreshold) {
+      updateData.rlhf_candidate = true;
+      // If it was previously marked for review, we can unmark it, 
+      // UNLESS it was flagged for other reasons (like safety critical edge case)
+      if (!updateData.flagged) {
+        updateData.needs_human_review = false;
+      }
+    } else {
+      // Low confidence -> needs human labeling (SFT)
+      updateData.rlhf_candidate = false;
+      updateData.needs_human_review = true;
+    }
+  } else {
+    // If transcription failed or wasn't run, we probably need human review
+    updateData.needs_human_review = true;
+    updateData.rlhf_candidate = false;
   }
 
   // Update segment
@@ -237,51 +267,9 @@ async function saveResults(segmentId, detectionResult, audioAnalysis = null, key
       .eq('segment_id', segmentId);
   }
 
-  // Insert edge case matches (only if detection was run)
-  if (detectionResult && detectionResult.detectedEdgeCases) {
-    const matches = detectionResult.detectedEdgeCases.map(match => ({
-      segment_id: segmentId,
-      case_id: match.caseId,
-      case_name: match.caseName,
-      category: match.category,
-      severity: match.severity,
-      confidence: match.confidence,
-      match_type: match.matchType,
-      evidence: match.evidence,
-      is_custom_rule: false
-    }));
-
-    // Add custom rule matches
-    const customMatches = detectionResult.customRuleMatches.map(match => ({
-      segment_id: segmentId,
-      case_id: match.ruleId,
-      case_name: match.ruleName,
-      category: 'custom',
-      severity: match.priority === 'critical' ? 1.0 : match.priority === 'high' ? 0.8 : match.priority === 'medium' ? 0.6 : 0.4,
-      confidence: match.confidence,
-      match_type: 'custom_rule',
-      evidence: { matchedConditions: match.matchedConditions },
-      is_custom_rule: true
-    }));
-
-    const allMatches = [...matches, ...customMatches];
-
-    if (allMatches.length > 0) {
-      // Delete existing matches for this segment (in case of reprocessing)
-      await supabase
-        .from('edge_case_matches')
-        .delete()
-        .eq('segment_id', segmentId);
-
-      const { error: matchError } = await supabase
-        .from('edge_case_matches')
-        .insert(allMatches);
-
-      if (matchError) {
-        throw new Error(`Failed to insert edge case matches: ${matchError.message}`);
-      }
-    }
-  }
+  // Note: We aren't inserting edge case matches from transcription text analysis here 
+  // because we are prioritizing audio/keyword analysis for now. 
+  // If we wanted to add text-based edge case detection back, we would re-enable that logic.
 }
 
 async function processSegment(segment, tempDir, index, total) {
@@ -297,6 +285,7 @@ async function processSegment(segment, tempDir, index, total) {
   let tempPath = null;
   let audioAnalysis = null;
   let keywordDetection = null;
+  let transcriptionResult = null;
 
   try {
     // Download segment
@@ -314,11 +303,25 @@ async function processSegment(segment, tempDir, index, total) {
     keywordDetection = await runKeywordDetection(tempPath);
     console.log(`     Keyword Score: ${keywordDetection.keyword_score.toFixed(3)}`);
     console.log(`     Keywords Found: ${keywordDetection.detected_keywords.length}`);
-    console.log(`     Flagged Cases: ${keywordDetection.flagged_cases.length}`);
+
+    // Transcription with Confidence Scoring
+    console.log('  📝 Running transcription & confidence scoring...');
+    transcriptionResult = await transcribeAudio(tempPath);
+    if (transcriptionResult) {
+      console.log(`     Confidence: ${(transcriptionResult.confidence * 100).toFixed(1)}%`);
+      const rlhfThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.85');
+      if (transcriptionResult.confidence >= rlhfThreshold) {
+        console.log(`     🎯 Routing: RLHF Candidate (> ${rlhfThreshold})`);
+      } else {
+        console.log(`     👤 Routing: Human Labeling / SFT (< ${rlhfThreshold})`);
+      }
+    } else {
+      console.log('     Transcription skipped or failed');
+    }
 
     // Save combined results
     console.log('  💾 Saving results...');
-    await saveResults(segment.id, null, audioAnalysis, keywordDetection);
+    await saveResults(segment.id, transcriptionResult, audioAnalysis, keywordDetection);
 
     // Calculate final combined score
     const finalScore = audioAnalysis && keywordDetection.keyword_score > 0
@@ -327,29 +330,15 @@ async function processSegment(segment, tempDir, index, total) {
 
     // Summary
     console.log('  ✅ Complete!');
-    console.log(`     Final Score: ${finalScore.toFixed(3)} (audio: ${audioAnalysis.score.toFixed(3)}, keywords: ${keywordDetection.keyword_score.toFixed(3)})`);
-    console.log(`     Audio Patterns: ${audioAnalysis.patterns.length}`);
+    console.log(`     Final Score: ${finalScore.toFixed(3)}`);
     console.log(`     Edge Cases Flagged: ${keywordDetection.flagged_cases.length}`);
-
-    if (audioAnalysis.patterns.length > 0) {
-      console.log(`     Audio Patterns:`);
-      audioAnalysis.patterns.forEach(pattern => {
-        console.log(`       - ${pattern.replace(/_/g, ' ')}`);
-      });
-    }
-
-    if (keywordDetection.flagged_cases.length > 0) {
-      console.log(`     Flagged Edge Cases:`);
-      keywordDetection.flagged_cases.forEach(edgeCase => {
-        console.log(`       - ${edgeCase.name} (${edgeCase.case_id}): ${edgeCase.matched_keywords.join(', ')}`);
-      });
-    }
 
     return {
       success: true,
       segment,
       audioAnalysis,
       keywordDetection,
+      transcriptionResult,
       finalScore
     };
   } catch (error) {
@@ -358,7 +347,7 @@ async function processSegment(segment, tempDir, index, total) {
   } finally {
     // Clean up temp file
     if (tempPath) {
-      await fs.unlink(tempPath).catch(() => {});
+      await fs.unlink(tempPath).catch(() => { });
     }
   }
 }
@@ -367,7 +356,7 @@ async function main() {
   const options = parseArgs();
 
   console.log('╔═══════════════════════════════════════════════════════════════╗');
-  console.log('║         LiveATC Edge Case Detection - Batch Processor        ║');
+  console.log('║    LiveATC Edge Case Detection & Confidence Routing System    ║');
   console.log('╚═══════════════════════════════════════════════════════════════╝');
   console.log('');
 
@@ -391,9 +380,6 @@ async function main() {
     const tempDir = path.join(os.tmpdir(), `edge-case-detection-${Date.now()}`);
     await fs.mkdir(tempDir, { recursive: true });
 
-    console.log('Running audio-only analysis (no transcription)...');
-    console.log('');
-
     // Process segments
     const results = [];
     const startTime = Date.now();
@@ -402,7 +388,7 @@ async function main() {
       const result = await processSegment(segments[i], tempDir, i, segments.length);
       results.push(result);
 
-      // Brief pause between segments to avoid rate limits
+      // Brief pause between segments
       if (i < segments.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -414,19 +400,19 @@ async function main() {
     // Summary
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
-    const audioAnalyzedCount = results.filter(r => r.success && r.audioAnalysis).length;
-    const highScoreCount = results.filter(r => r.success && r.audioAnalysis && r.audioAnalysis.score >= 0.65).length;
+    const rlhfCount = results.filter(r => r.transcriptionResult && r.transcriptionResult.confidence >= (parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || 0.85))).length;
+    const humanReviewCount = results.filter(r => r.transcriptionResult && r.transcriptionResult.confidence < (parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || 0.85))).length;
     const totalDuration = (Date.now() - startTime) / 1000;
 
     console.log('\n' + '═'.repeat(80));
-    console.log('BATCH PROCESSING COMPLETE - AUDIO ANALYSIS ONLY');
+    console.log('BATCH PROCESSING COMPLETE');
     console.log('═'.repeat(80));
     console.log(`  Total segments: ${segments.length}`);
     console.log(`  ✅ Successful: ${successCount}`);
     console.log(`  ❌ Failed: ${failureCount}`);
-    console.log(`  🎵 Audio analyzed: ${audioAnalyzedCount}`);
-    console.log(`  ⭐ High interest (≥65%): ${highScoreCount}`);
-    console.log(`  ⏱️  Total time: ${totalDuration.toFixed(1)}s (${(totalDuration / segments.length).toFixed(1)}s per segment)`);
+    console.log(`  🎯 RLHF Candidates: ${rlhfCount}`);
+    console.log(`  👤 Needs Human Review: ${humanReviewCount}`);
+    console.log(`  ⏱️  Total time: ${totalDuration.toFixed(1)}s`);
     console.log('═'.repeat(80));
     console.log('');
 

@@ -55,6 +55,12 @@ export class EdgeCaseDetector {
    * @param {Object} options - Detection options
    * @returns {Promise<EdgeCaseDetectionResult>}
    */
+  /**
+   * Detect edge cases in audio file
+   * @param {string} audioPath - Path to audio file
+   * @param {Object} options - Detection options
+   * @returns {Promise<EdgeCaseDetectionResult>}
+   */
   async detect(audioPath, options = {}) {
     if (!this.taxonomy) {
       await this.initialize();
@@ -62,29 +68,63 @@ export class EdgeCaseDetector {
 
     console.log(`Analyzing: ${path.basename(audioPath)}`);
 
-    // Step 1: Audio Analysis
-    console.log('  Running audio analysis...');
-    const audioAnalysis = await this.audioAnalyzer.analyze(audioPath);
-
-    // Step 2: Transcription
+    // Step 1: Transcription (Primary Signal)
     console.log('  Transcribing audio...');
     const transcription = options.transcription || await this.stt.transcribe(audioPath);
 
-    // Step 3: Content Analysis
-    console.log('  Analyzing content...');
-    const contentAnalysis = this.contentAnalyzer.analyze(transcription, audioAnalysis);
+    // Step 2: Audio Analysis (Secondary/Metadata)
+    console.log('  Running audio analysis...');
+    const audioAnalysis = await this.audioAnalyzer.analyze(audioPath);
 
-    // Step 4: Pattern Matching
-    console.log('  Matching patterns...');
-    const detectedCases = this._matchPatterns(contentAnalysis, audioAnalysis, transcription);
+    // Step 3: Confidence-based Routing
+    const confidence = transcription.confidence;
+    const rlhfThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || 0.85);
+    const humanReviewThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_HUMAN || 0.85);
 
-    // Step 5: Apply Custom Rules
+    let routing = {
+      isEdgeCase: false,
+      route: 'unknown',
+      needsHumanReview: false,
+      rlhfCandidate: false
+    };
+
+    if (confidence >= rlhfThreshold) {
+      // High confidence -> Good candidate for RLHF / synthetic data generation
+      routing = {
+        isEdgeCase: false,
+        route: 'generate_rlhf_variations',
+        needsHumanReview: false,
+        rlhfCandidate: true,
+        reason: 'high_confidence_transcription'
+      };
+    } else {
+      // Low confidence -> Edge case needing human review
+      routing = {
+        isEdgeCase: true,
+        route: 'human_labeling',
+        needsHumanReview: true,
+        rlhfCandidate: false,
+        reason: 'low_confidence_transcription'
+      };
+    }
+
+    // Still run content analysis for metadata/categorization if possible
+    let contentAnalysis = {};
+    let detectedCases = [];
+    if (transcription.text) {
+      console.log('  Analyzing content...');
+      contentAnalysis = this.contentAnalyzer.analyze(transcription, audioAnalysis);
+      console.log('  Matching patterns...');
+      detectedCases = this._matchPatterns(contentAnalysis, audioAnalysis, transcription);
+    }
+
+    // Apply Custom Rules (still valuable for specific tagging)
     const customMatches = this._applyCustomRules(transcription, audioAnalysis, contentAnalysis);
 
-    // Step 6: Calculate Overall Edge Case Score
+    // Calculate score (legacy/hybrid score) - helpful for sorting within the buckets
     const edgeCaseScore = this._calculateEdgeCaseScore(detectedCases, customMatches, contentAnalysis);
 
-    // Step 7: Compile Results
+    // Compile Results
     const result = {
       audioPath,
       transcription: {
@@ -99,21 +139,22 @@ export class EdgeCaseDetector {
         volumeVariance: audioAnalysis.volumeVariance,
         overlappingTransmissions: audioAnalysis.overlappingTransmissions
       },
+      routing, // New field for routing decision
       detectedEdgeCases: detectedCases,
       customRuleMatches: customMatches,
       edgeCaseScore,
-      communicationQuality: contentAnalysis.communicationQuality,
-      flagged: edgeCaseScore > 0.5,
-      summary: this._generateSummary(detectedCases, customMatches, edgeCaseScore)
+      communicationQuality: contentAnalysis.communicationQuality || {},
+      flagged: routing.isEdgeCase, // Legacy compatibility
+      summary: this._generateSummary(detectedCases, customMatches, edgeCaseScore, routing)
     };
 
-    console.log(`  Edge Case Score: ${edgeCaseScore.toFixed(2)}`);
-    console.log(`  Detected Cases: ${detectedCases.length}`);
-    console.log(`  Custom Matches: ${customMatches.length}`);
+    console.log(`  Confidence: ${confidence.toFixed(2)}`);
+    console.log(`  Route: ${routing.route}`);
     console.log(`  Flagged: ${result.flagged ? 'YES' : 'NO'}`);
 
     return result;
   }
+
 
   /**
    * Match patterns against taxonomy
@@ -382,8 +423,12 @@ export class EdgeCaseDetector {
   /**
    * Generate human-readable summary
    */
-  _generateSummary(detectedCases, customMatches, edgeCaseScore) {
+  _generateSummary(detectedCases, customMatches, edgeCaseScore, routing) {
     const parts = [];
+
+    if (routing && routing.route) {
+      parts.push(`Routing: ${routing.route.toUpperCase()} (Confidence: ${(routing.isEdgeCase ? 'Low' : 'High')})`);
+    }
 
     if (edgeCaseScore > 0.8) {
       parts.push('CRITICAL: High-priority edge case detected');
@@ -417,7 +462,7 @@ export class EdgeCaseDetector {
     for (const category of Object.values(this.taxonomy.categories)) {
       for (const edgeCase of category.cases) {
         if (edgeCase.id.toLowerCase().includes(type.toLowerCase()) ||
-            edgeCase.name.toLowerCase().includes(type.toLowerCase())) {
+          edgeCase.name.toLowerCase().includes(type.toLowerCase())) {
           return edgeCase;
         }
       }

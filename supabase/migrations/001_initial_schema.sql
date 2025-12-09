@@ -31,6 +31,12 @@ CREATE TABLE segments (
     start_time_in_recording FLOAT NOT NULL,
     file_size_bytes INTEGER NOT NULL,
     audio_quality_score FLOAT CHECK (audio_quality_score >= 0 AND audio_quality_score <= 1),
+    -- New fields for Edge Case Detection Update
+    transcription_text TEXT,
+    transcription_confidence FLOAT CHECK (transcription_confidence >= 0 AND transcription_confidence <= 1),
+    needs_human_review BOOLEAN DEFAULT FALSE,
+    rlhf_candidate BOOLEAN DEFAULT FALSE,
+    -- End new fields
     label_count INTEGER DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'reviewed', 'rejected')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

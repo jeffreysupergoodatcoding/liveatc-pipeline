@@ -18,31 +18,74 @@ export async function PATCH(request, { params }) {
     // Await params in Next.js 14+
     const { id } = await params;
 
-    const { reviewed, reviewNotes, reviewedBy } = await request.json();
+    const body = await request.json();
+    console.log('Review API received:', body);
 
+    const { reviewed, approved, notes, manualTranscription, contextNotes, reviewedBy } = body;
+
+    // Update segment with review information
     const updates = {
       reviewed,
       reviewed_at: reviewed ? new Date().toISOString() : null,
-      review_notes: reviewNotes || null,
+      review_notes: notes || null,
       reviewed_by: reviewedBy || null
     };
 
-    const { data, error } = await supabase
+    // If manual transcription provided, update it
+    if (manualTranscription) {
+      updates.transcription = manualTranscription;
+      // updates.manual_transcription = true; // TODO: Add this column via migration
+      console.log('Adding manual transcription to updates');
+    }
+
+    console.log('Updating segment with:', updates);
+
+    const { data: segment, error: updateError } = await supabase
       .from('segments')
       .update(updates)
       .eq('id', id)
-      .select()
+      .select('*, recordings!inner(airport, facility, recorded_at)')
       .single();
 
-    if (error) {
-      throw error;
+    if (updateError) {
+      console.error('Error updating segment:', updateError);
+      throw updateError;
     }
 
-    return NextResponse.json(data);
+    console.log('Segment updated successfully');
+
+    // If approved, create a segment label
+    if (approved && manualTranscription) {
+      console.log('Creating segment label...');
+
+      const labelData = {
+        segment_id: id,
+        transcription: manualTranscription,
+        response: contextNotes || null, // Use response field for context notes
+        confidence: 'high', // Manual transcriptions are high confidence
+        created_at: new Date().toISOString(),
+        user_id: reviewedBy || null
+      };
+
+      console.log('Label data:', labelData);
+
+      const { error: labelError } = await supabase
+        .from('segment_labels')
+        .insert(labelData);
+
+      if (labelError) {
+        console.error('Error creating segment label:', labelError);
+        // Don't fail the whole request if label creation fails
+      } else {
+        console.log('Segment label created successfully');
+      }
+    }
+
+    return NextResponse.json(segment);
   } catch (error) {
     console.error('Error updating review status:', error);
     return NextResponse.json(
-      { error: 'Failed to update review status' },
+      { error: error.message || 'Failed to update review status' },
       { status: 500 }
     );
   }

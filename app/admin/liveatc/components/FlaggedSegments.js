@@ -9,11 +9,14 @@ export default function FlaggedSegments() {
   const [filters, setFilters] = useState({
     category: 'all',
     minScore: 0,
-    reviewed: 'all'
+    reviewed: 'all',
+    routing: 'all'
   });
   const [selectedSegment, setSelectedSegment] = useState(null);
   const [reviewMode, setReviewMode] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [manualTranscription, setManualTranscription] = useState('');
+  const [contextNotes, setContextNotes] = useState('');
 
   useEffect(() => {
     fetchFlaggedSegments();
@@ -40,6 +43,19 @@ export default function FlaggedSegments() {
   async function submitReview(approved) {
     if (!selectedSegment) return;
 
+    // Validate that manual transcription is provided if approved
+    if (approved && !manualTranscription.trim()) {
+      alert('Please provide a manual transcription before approving.');
+      return;
+    }
+
+    console.log('Submitting review:', {
+      approved,
+      manualTranscription,
+      contextNotes,
+      reviewNotes
+    });
+
     try {
       const response = await fetch(`/api/segments/${selectedSegment.id}/review`, {
         method: 'PATCH',
@@ -47,18 +63,39 @@ export default function FlaggedSegments() {
         body: JSON.stringify({
           reviewed: true,
           approved,
-          notes: reviewNotes
+          notes: reviewNotes,
+          manualTranscription: manualTranscription.trim(),
+          contextNotes: contextNotes.trim()
         })
       });
 
-      if (response.ok) {
-        setReviewMode(false);
-        setReviewNotes('');
-        setSelectedSegment(null);
-        fetchFlaggedSegments();
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
+        alert(`Failed to submit review: ${errorData.error || 'Unknown error'}`);
+        return;
       }
+
+      const data = await response.json();
+      console.log('Review submitted successfully:', data);
+
+      // Show success message
+      alert(approved ? 'Segment approved and labeled!' : 'Segment rejected.');
+
+      // Reset form
+      setReviewMode(false);
+      setReviewNotes('');
+      setManualTranscription('');
+      setContextNotes('');
+      setSelectedSegment(null);
+
+      // Refresh the list
+      fetchFlaggedSegments();
     } catch (error) {
       console.error('Error submitting review:', error);
+      alert(`Error: ${error.message}`);
     }
   }
 
@@ -70,23 +107,6 @@ export default function FlaggedSegments() {
     <div className={styles.container}>
       <div className={styles.filters}>
         <div className={styles.filterGroup}>
-          <label>Category</label>
-          <select
-            value={filters.category}
-            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-          >
-            <option value="all">All Categories</option>
-            <option value="safety_critical">Safety Critical</option>
-            <option value="emergency_declarations">Emergency Declarations</option>
-            <option value="readback_errors">Readback Errors</option>
-            <option value="communication_failures">Communication Failures</option>
-            <option value="phraseology_issues">Phraseology Issues</option>
-            <option value="environmental_conditions">Environmental Conditions</option>
-            <option value="operational_issues">Operational Issues</option>
-          </select>
-        </div>
-
-        <div className={styles.filterGroup}>
           <label>Min Score</label>
           <input
             type="range"
@@ -97,6 +117,17 @@ export default function FlaggedSegments() {
             onChange={(e) => setFilters({ ...filters, minScore: parseFloat(e.target.value) })}
           />
           <span className={styles.scoreValue}>{filters.minScore.toFixed(1)}</span>
+        </div>
+        <div className={styles.filterGroup}>
+          <label>Routing</label>
+          <select
+            value={filters.routing}
+            onChange={(e) => setFilters({ ...filters, routing: e.target.value })}
+          >
+            <option value="all">All</option>
+            <option value="rlhf">RLHF Candidates (High Conf)</option>
+            <option value="review">Human Review (Low Conf)</option>
+          </select>
         </div>
 
         <div className={styles.filterGroup}>
@@ -114,58 +145,70 @@ export default function FlaggedSegments() {
         <button className={styles.refreshButton} onClick={fetchFlaggedSegments}>
           ↻ Refresh
         </button>
-      </div>
+      </div >
 
-      {segments.length === 0 ? (
-        <div className={styles.empty}>
-          <p>No flagged segments found</p>
-          <span>Try adjusting your filters</span>
-        </div>
-      ) : (
-        <div className={styles.content}>
-          <div className={styles.segmentList}>
-            <div className={styles.listHeader}>
-              <h4>{segments.length} Flagged Segments</h4>
-            </div>
-            {segments.map((segment) => (
-              <SegmentCard
-                key={segment.id}
-                segment={segment}
-                selected={selectedSegment?.id === segment.id}
-                onClick={() => {
-                  setSelectedSegment(segment);
-                  setReviewMode(false);
-                  setReviewNotes('');
-                }}
-              />
-            ))}
+      {
+        segments.length === 0 ? (
+          <div className={styles.empty}>
+            <p>No low confidence segments found</p>
+            <span>Try adjusting your filters</span>
           </div>
-
-          {selectedSegment && (
-            <div className={styles.detailsPanel}>
-              <SegmentDetails
-                segment={selectedSegment}
-                reviewMode={reviewMode}
-                reviewNotes={reviewNotes}
-                onReviewNotesChange={setReviewNotes}
-                onStartReview={() => setReviewMode(true)}
-                onCancelReview={() => {
-                  setReviewMode(false);
-                  setReviewNotes('');
-                }}
-                onApprove={() => submitReview(true)}
-                onReject={() => submitReview(false)}
-                onClose={() => {
-                  setSelectedSegment(null);
-                  setReviewMode(false);
-                  setReviewNotes('');
-                }}
-              />
+        ) : (
+          <div className={styles.content}>
+            <div className={styles.segmentList}>
+              <div className={styles.listHeader}>
+                <h4>{segments.length} Low Confidence Segments (Human Review)</h4>
+              </div>
+              {segments.map((segment) => (
+                <SegmentCard
+                  key={segment.id}
+                  segment={segment}
+                  selected={selectedSegment?.id === segment.id}
+                  onClick={() => {
+                    setSelectedSegment(segment);
+                    setReviewMode(false);
+                    setReviewNotes('');
+                    setManualTranscription('');
+                    setContextNotes('');
+                  }}
+                />
+              ))}
             </div>
-          )}
-        </div>
-      )}
-    </div>
+
+            {selectedSegment && (
+              <div className={styles.detailsPanel}>
+                <SegmentDetails
+                  segment={selectedSegment}
+                  reviewMode={reviewMode}
+                  reviewNotes={reviewNotes}
+                  manualTranscription={manualTranscription}
+                  contextNotes={contextNotes}
+                  onReviewNotesChange={setReviewNotes}
+                  onManualTranscriptionChange={setManualTranscription}
+                  onContextNotesChange={setContextNotes}
+                  onStartReview={() => setReviewMode(true)}
+                  onCancelReview={() => {
+                    setReviewMode(false);
+                    setReviewNotes('');
+                    setManualTranscription('');
+                    setContextNotes('');
+                  }}
+                  onApprove={() => submitReview(true)}
+                  onReject={() => submitReview(false)}
+                  onClose={() => {
+                    setSelectedSegment(null);
+                    setReviewMode(false);
+                    setReviewNotes('');
+                    setManualTranscription('');
+                    setContextNotes('');
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )
+      }
+    </div >
   );
 }
 
@@ -183,27 +226,18 @@ function SegmentCard({ segment, selected, onClick }) {
           <span className={styles.date}>{new Date(segment.recorded_at).toLocaleString()}</span>
         </div>
         <div className={styles.scoreDisplay}>
-          <div className={styles.score} data-severity={getSeverityLevel(segment.audio_analysis_score || 0)}>
-            {((segment.audio_analysis_score || 0) * 100).toFixed(0)}
+          <div className={styles.score} data-severity={getSeverityLevel(segment.transcription_confidence || 0)}>
+            {((segment.transcription_confidence || 0) * 100).toFixed(0)}%
           </div>
         </div>
       </div>
 
-      {segment.transcription && (
-        <div className={styles.transcription}>
-          {segment.transcription.substring(0, 120)}...
-        </div>
-      )}
+      {/* Transcription Hidden for Low Confidence (Human Review) */}
 
-      {topMatch && (
-        <div className={styles.topMatch}>
-          <span className={styles.matchCategory}>{formatCategory(topMatch.category)}</span>
-          <span className={styles.matchName}>{topMatch.case_name}</span>
-        </div>
-      )}
+      {/* Edge Case Matches removed from card view to simplify */}
 
       <div className={styles.cardFooter}>
-        <span className={styles.matchCount}>{segment.matches?.length || 0} matches</span>
+        <span className={styles.matchCount}>Confidence: {((segment.transcription_confidence || 0) * 100).toFixed(1)}%</span>
         {segment.speaker_count > 1 && (
           <span className={styles.speakers}>{segment.speaker_count} speakers</span>
         )}
@@ -215,7 +249,21 @@ function SegmentCard({ segment, selected, onClick }) {
   );
 }
 
-function SegmentDetails({ segment, reviewMode, reviewNotes, onReviewNotesChange, onStartReview, onCancelReview, onApprove, onReject, onClose }) {
+function SegmentDetails({
+  segment,
+  reviewMode,
+  reviewNotes,
+  manualTranscription,
+  contextNotes,
+  onReviewNotesChange,
+  onManualTranscriptionChange,
+  onContextNotesChange,
+  onStartReview,
+  onCancelReview,
+  onApprove,
+  onReject,
+  onClose
+}) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [loadingAudio, setLoadingAudio] = useState(true);
 
@@ -253,84 +301,38 @@ function SegmentDetails({ segment, reviewMode, reviewNotes, onReviewNotesChange,
       </div>
 
       <div className={styles.detailsBody}>
-        {/* Audio Analysis (Audio-First System) */}
-        {segment.audio_analysis_score !== null && segment.audio_analysis_score !== undefined && (
-          <section>
-            <h5>Audio Analysis</h5>
-            <div className={styles.audioAnalysis}>
-              <div className={styles.scoreBar}>
-                <div
-                  className={styles.scoreFill}
-                  style={{ width: `${segment.audio_analysis_score * 100}%` }}
-                  data-severity={getSeverityLevel(segment.audio_analysis_score)}
-                />
-              </div>
-              <div className={styles.scoreText}>
-                <span>{(segment.audio_analysis_score * 100).toFixed(1)}%</span>
-                <span className={styles.severityLabel}>
-                  {getSeverityLevel(segment.audio_analysis_score).toUpperCase()}
-                </span>
-              </div>
+        {/* Confidence Score Display */}
+        <section>
+          <h5>Transcription Confidence</h5>
+          <div className={styles.audioAnalysis}>
+            <div className={styles.scoreBar}>
+              <div
+                className={styles.scoreFill}
+                style={{ width: `${(segment.transcription_confidence || 0) * 100}%` }}
+                data-severity={getSeverityLevel(segment.transcription_confidence || 0)}
+              />
+            </div>
+            <div className={styles.scoreText}>
+              <span>{((segment.transcription_confidence || 0) * 100).toFixed(1)}%</span>
+              <span className={styles.severityLabel}>
+                {getConfidenceLabel(segment.transcription_confidence || 0)}
+              </span>
+            </div>
+          </div>
+        </section>
 
-              {segment.detected_patterns && segment.detected_patterns.length > 0 && (
-                <div className={styles.patterns}>
-                  <strong>Patterns:</strong>
-                  <div className={styles.patternTags}>
-                    {segment.detected_patterns.map((pattern, i) => (
-                      <span key={i} className={styles.patternTag}>
-                        {pattern.replace(/_/g, ' ')}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {segment.keywords_detected && segment.keywords_detected.length > 0 && (
-                <div className={styles.keywords}>
-                  <strong>Keywords:</strong>
-                  <div className={styles.keywordTags}>
-                    {segment.keywords_detected.map((keyword, i) => (
-                      <span key={i} className={styles.keywordTag}>
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {segment.audio_features && Object.keys(segment.audio_features).length > 0 && (
-                <div className={styles.features}>
-                  <strong>Audio Features:</strong>
-                  <div className={styles.featureGrid}>
-                    {segment.audio_features.tempo && (
-                      <div className={styles.feature}>
-                        <span className={styles.featureLabel}>Tempo:</span>
-                        <span className={styles.featureValue}>{segment.audio_features.tempo.toFixed(0)} BPM</span>
-                      </div>
-                    )}
-                    {segment.audio_features.volume_variance !== undefined && (
-                      <div className={styles.feature}>
-                        <span className={styles.featureLabel}>Volume Variance:</span>
-                        <span className={styles.featureValue}>{segment.audio_features.volume_variance.toFixed(3)}</span>
-                      </div>
-                    )}
-                    {segment.audio_features.snr !== undefined && (
-                      <div className={styles.feature}>
-                        <span className={styles.featureLabel}>SNR:</span>
-                        <span className={styles.featureValue}>{segment.audio_features.snr.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {segment.audio_features.silence_ratio !== undefined && (
-                      <div className={styles.feature}>
-                        <span className={styles.featureLabel}>Silence:</span>
-                        <span className={styles.featureValue}>{(segment.audio_features.silence_ratio * 100).toFixed(0)}%</span>
-                      </div>
-                    )}
-                  </div>
+        {/* Audio Features (Optional, keeping if present for debugging but demoting) */}
+        {segment.audio_features && Object.keys(segment.audio_features).length > 0 && (
+          <div className={styles.features}>
+            <div className={styles.featureGrid}>
+              {segment.audio_features.snr !== undefined && (
+                <div className={styles.feature}>
+                  <span className={styles.featureLabel}>SNR:</span>
+                  <span className={styles.featureValue}>{segment.audio_features.snr.toFixed(2)}</span>
                 </div>
               )}
             </div>
-          </section>
+          </div>
         )}
 
         {/* Audio Playback */}
@@ -366,37 +368,14 @@ function SegmentDetails({ segment, reviewMode, reviewNotes, onReviewNotesChange,
           </section>
         )}
 
-        {/* Detected Edge Cases */}
+        {/* Detected Edge Cases Hidden
         {segment.matches && segment.matches.length > 0 && (
           <section>
             <h5>Detected Edge Cases ({segment.matches.length})</h5>
-            <div className={styles.matches}>
-              {segment.matches.map((match, i) => (
-                <div key={i} className={styles.match}>
-                  <div className={styles.matchHeader}>
-                    <span className={styles.matchName}>{match.case_name}</span>
-                    <span className={styles.matchSeverity} data-severity={getSeverityLevel(match.severity)}>
-                      {(match.severity * 100).toFixed(0)}
-                    </span>
-                  </div>
-                  <div className={styles.matchMeta}>
-                    <span className={styles.matchCategory}>{formatCategory(match.category)}</span>
-                    <span className={styles.matchType}>{match.match_type}</span>
-                    <span className={styles.matchConfidence}>
-                      {(match.confidence * 100).toFixed(0)}% confidence
-                    </span>
-                  </div>
-                  {match.evidence && (
-                    <div className={styles.evidence}>
-                      <strong>Evidence:</strong>
-                      <pre>{JSON.stringify(match.evidence, null, 2)}</pre>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            ...
           </section>
-        )}
+        )} 
+        */}
 
         {/* Review Section */}
         {segment.reviewed ? (
@@ -412,13 +391,57 @@ function SegmentDetails({ segment, reviewMode, reviewNotes, onReviewNotesChange,
         ) : reviewMode ? (
           <section>
             <h5>Submit Review</h5>
-            <textarea
-              className={styles.reviewTextarea}
-              placeholder="Add review notes (optional)..."
-              value={reviewNotes}
-              onChange={(e) => onReviewNotesChange(e.target.value)}
-              rows={4}
-            />
+
+            {/* Manual Transcription Input */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                Manual Transcription <span style={{ color: 'red' }}>*</span>
+              </label>
+              <textarea
+                className={styles.reviewTextarea}
+                placeholder="Enter the correct transcription for this audio segment..."
+                value={manualTranscription}
+                onChange={(e) => onManualTranscriptionChange(e.target.value)}
+                rows={4}
+                style={{ marginBottom: '0' }}
+              />
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                This will be used as the ground truth transcription for training.
+              </p>
+            </div>
+
+            {/* Context Notes Input */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                Context Notes (Optional)
+              </label>
+              <textarea
+                className={styles.reviewTextarea}
+                placeholder="Add context (e.g., 'emergency situation', 'multiple speakers', 'background noise')..."
+                value={contextNotes}
+                onChange={(e) => onContextNotesChange(e.target.value)}
+                rows={2}
+                style={{ marginBottom: '0' }}
+              />
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                Additional context to help with training (e.g., emergency, weather conditions, etc.)
+              </p>
+            </div>
+
+            {/* Review Notes Input */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                Review Notes (Optional)
+              </label>
+              <textarea
+                className={styles.reviewTextarea}
+                placeholder="Add internal review notes..."
+                value={reviewNotes}
+                onChange={(e) => onReviewNotesChange(e.target.value)}
+                rows={2}
+              />
+            </div>
+
             <div className={styles.reviewActions}>
               <button onClick={onApprove} className={styles.approveButton}>
                 Approve
@@ -449,9 +472,17 @@ function formatCategory(category) {
   ).join(' ');
 }
 
+function getConfidenceLabel(score) {
+  if (score >= 0.85) return 'HIGH CONFIDENCE';
+  if (score >= 0.70) return 'MEDIUM CONFIDENCE';
+  if (score >= 0.50) return 'LOW CONFIDENCE';
+  return 'VERY LOW CONFIDENCE';
+}
+
 function getSeverityLevel(score) {
-  if (score >= 0.85) return 'critical';
-  if (score >= 0.70) return 'high';
-  if (score >= 0.50) return 'medium';
-  return 'low';
+  // For Confidence: High is Good (Blue/Low severity), Low is Bad (Red/Critical severity)
+  if (score >= 0.85) return 'low';      // High confidence -> Blue (Good)
+  if (score >= 0.70) return 'medium';   // Medium confidence -> Yellow
+  if (score >= 0.50) return 'high';     // Low confidence -> Orange
+  return 'critical';                    // Very low confidence -> Red
 }
