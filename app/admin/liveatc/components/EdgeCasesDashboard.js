@@ -23,60 +23,51 @@ export default function EdgeCasesDashboard() {
     try {
       const { data: segments, error } = await supabase
         .from('segments')
-        .select('audio_analysis_score, detected_patterns');
+        .select('transcription_confidence, rlhf_candidate, needs_human_review, status');
 
       if (error) throw error;
 
-      // Calculate audio analysis statistics
-      const analyzedSegments = segments.filter(s => s.audio_analysis_score !== null);
+      // Calculate confidence routing statistics
       const totalSegments = segments.length;
-      const analyzedCount = analyzedSegments.length;
+      const transcribedSegments = segments.filter(s => s.transcription_confidence !== null);
+      const transcribedCount = transcribedSegments.length;
 
-      // Calculate average audio score
-      const avgAudioScore = analyzedCount > 0
-        ? analyzedSegments.reduce((sum, s) => sum + s.audio_analysis_score, 0) / analyzedCount
+      // High Confidence (RLHF) - confidence >= 90%
+      const rlhfCandidates = segments.filter(s => s.rlhf_candidate === true);
+      const rlhfCount = rlhfCandidates.length;
+
+      // Processed for RLHF (needs_ranking status)
+      const processedForRLHF = segments.filter(s => s.status === 'needs_ranking');
+      const processedCount = processedForRLHF.length;
+
+      // Low Confidence (Human Review) - confidence < 90%
+      const humanReviewSegments = segments.filter(s => s.needs_human_review === true);
+      const humanReviewCount = humanReviewSegments.length;
+
+      // Average confidence for transcribed segments
+      const avgConfidence = transcribedCount > 0
+        ? transcribedSegments.reduce((sum, s) => sum + (s.transcription_confidence || 0), 0) / transcribedCount
         : null;
 
-      // Count high interest segments (≥65%)
-      const highInterestCount = analyzedSegments.filter(s => s.audio_analysis_score >= 0.65).length;
-
-      // Count unique patterns detected
-      const allPatterns = analyzedSegments
-        .filter(s => s.detected_patterns && s.detected_patterns.length > 0)
-        .flatMap(s => s.detected_patterns);
-      const uniquePatterns = new Set(allPatterns);
-
-      // Pattern distribution
-      const patternCounts = {};
-      allPatterns.forEach(pattern => {
-        patternCounts[pattern] = (patternCounts[pattern] || 0) + 1;
-      });
-
-      // Convert to array for display
-      const patternsByType = Object.entries(patternCounts)
-        .map(([pattern, count]) => ({ pattern, count }))
-        .sort((a, b) => b.count - a.count);
-
-      // Audio score distribution
-      const scoreDistribution = {
-        high: analyzedSegments.filter(s => s.audio_analysis_score >= 0.65).length,
-        medium: analyzedSegments.filter(s => s.audio_analysis_score >= 0.35 && s.audio_analysis_score < 0.65).length,
-        low: analyzedSegments.filter(s => s.audio_analysis_score >= 0.1 && s.audio_analysis_score < 0.35).length,
-        routine: analyzedSegments.filter(s => s.audio_analysis_score < 0.1).length
+      // Confidence distribution
+      const confidenceDistribution = {
+        high: transcribedSegments.filter(s => s.transcription_confidence >= 0.90).length,
+        medium: transcribedSegments.filter(s => s.transcription_confidence >= 0.70 && s.transcription_confidence < 0.90).length,
+        low: transcribedSegments.filter(s => s.transcription_confidence < 0.70).length
       };
 
       const overall = {
         total_segments: totalSegments,
-        analyzed_segments: analyzedCount,
-        high_interest_segments: highInterestCount,
-        avg_audio_score: avgAudioScore,
-        unique_patterns_detected: uniquePatterns.size
+        transcribed_segments: transcribedCount,
+        rlhf_candidates: rlhfCount,
+        processed_for_rlhf: processedCount,
+        needs_human_review: humanReviewCount,
+        avg_confidence: avgConfidence
       };
 
       setStats({
         overall,
-        byPattern: patternsByType,
-        scoreDistribution
+        confidenceDistribution
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -104,13 +95,13 @@ export default function EdgeCasesDashboard() {
           className={`${styles.tab} ${activeTab === 'analyzed' ? styles.active : ''}`}
           onClick={() => setActiveTab('analyzed')}
         >
-          High Confidence (RLHF)
+          High Confidence
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'flagged' ? styles.active : ''}`}
           onClick={() => setActiveTab('flagged')}
         >
-          Low Confidence (Human Review)
+          Low Confidence
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'upload' ? styles.active : ''}`}
@@ -136,6 +127,7 @@ function OverviewPanel({ stats, loading, onRefresh }) {
   const [activeSegments, setActiveSegments] = useState([]);
   const [loadingActive, setLoadingActive] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     fetchActiveSegments();
@@ -172,31 +164,37 @@ function OverviewPanel({ stats, loading, onRefresh }) {
     }
   }
 
-  async function runAnalysis() {
+  function handleRunAnalysisClick() {
+    console.log('handleRunAnalysisClick called, activeSegments:', activeSegments);
+
     if (activeSegments.length === 0) {
       alert('No segments queued for analysis');
       return;
     }
 
-    const segmentCount = activeSegments.length;
-    if (!confirm(`Run audio analysis on ${segmentCount} segment(s)?\n\nThis will take approximately ${segmentCount * 30} seconds.`)) {
-      return;
-    }
+    console.log('Showing confirmation modal');
+    setShowConfirmModal(true);
+  }
+
+  async function runAnalysis() {
+    console.log('runAnalysis confirmed, starting analysis');
+    setShowConfirmModal(false);
 
     setAnalyzing(true);
+    const processedSegmentIds = activeSegments.map(s => s.id);
+
     try {
       const response = await fetch('/api/segments/analyze', {
         method: 'POST'
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start analysis');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to start analysis');
       }
 
       const data = await response.json();
-
-      // Show progress message
-      alert(`Analysis started for ${data.count} segment(s).\n\nProcessing in background...\nCheck the Analyzed tab in about ${data.count * 30} seconds.`);
+      console.log('Analysis started:', data);
 
       // Poll for completion every 5 seconds
       let pollCount = 0;
@@ -205,32 +203,80 @@ function OverviewPanel({ stats, loading, onRefresh }) {
       const pollInterval = setInterval(async () => {
         pollCount++;
 
-        // Refresh active segments and stats
-        await fetchActiveSegments();
-        await onRefresh();
-
-        // Check if there are still active segments
-        const { data: currentActive } = await supabase
-          .from('segments')
-          .select('id')
-          .eq('active', true);
-
-        if (!currentActive || currentActive.length === 0 || pollCount >= maxPolls) {
-          clearInterval(pollInterval);
-          setAnalyzing(false);
-
-          // Final refresh
+        try {
+          // Refresh active segments and stats
           await fetchActiveSegments();
           await onRefresh();
 
-          if (pollCount < maxPolls) {
-            alert('Analysis complete! Check the Analyzed tab for results.');
+          // Check if there are still active segments
+          const { data: currentActive, error: activeError } = await supabase
+            .from('segments')
+            .select('id')
+            .eq('active', true);
+
+          if (activeError) {
+            console.error('Error checking active segments:', activeError);
+            clearInterval(pollInterval);
+            setAnalyzing(false);
+            alert('Error checking analysis status. Please refresh the page.');
+            return;
           }
+
+          if (!currentActive || currentActive.length === 0 || pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            setAnalyzing(false);
+
+            // Final refresh
+            await fetchActiveSegments();
+            await onRefresh();
+
+            if (pollCount < maxPolls) {
+              // Fetch the processed segments to show routing results
+              const { data: processedSegments, error: processedError } = await supabase
+                .from('segments')
+                .select('id, transcription_confidence, rlhf_candidate, needs_human_review')
+                .in('id', processedSegmentIds);
+
+              if (processedError) {
+                console.error('Error fetching processed segments:', processedError);
+                alert('Analysis complete! Check the tabs for results.');
+                return;
+              }
+
+              if (processedSegments && processedSegments.length > 0) {
+                const highConfidence = processedSegments.filter(s => s.rlhf_candidate === true);
+                const lowConfidence = processedSegments.filter(s => s.needs_human_review === true);
+
+                let message = '✓ Analysis Complete\n\n';
+                message += `Routing Results:\n`;
+                message += `  • ${highConfidence.length} → High Confidence (RLHF)\n`;
+                message += `  • ${lowConfidence.length} → Low Confidence (Human Review)\n\n`;
+
+                if (highConfidence.length > 0) {
+                  message += `High Confidence segments are ready for RLHF processing in the "High Confidence" tab.\n\n`;
+                }
+                if (lowConfidence.length > 0) {
+                  message += `Low Confidence segments need human review in the "Low Confidence" tab.`;
+                }
+
+                alert(message);
+              } else {
+                alert('Analysis complete! Check the tabs for results.');
+              }
+            } else {
+              alert('Analysis timed out. Some segments may still be processing. Please check the tabs and refresh.');
+            }
+          }
+        } catch (pollError) {
+          console.error('Error during polling:', pollError);
+          clearInterval(pollInterval);
+          setAnalyzing(false);
+          alert('Error during analysis. Please check the console and try again.');
         }
       }, 5000);
     } catch (error) {
       console.error('Error running analysis:', error);
-      alert('Failed to start analysis');
+      alert(`Failed to start analysis: ${error.message}`);
       setAnalyzing(false);
     }
   }
@@ -243,7 +289,7 @@ function OverviewPanel({ stats, loading, onRefresh }) {
     return <div className={styles.error}>Failed to load statistics</div>;
   }
 
-  const { overall, byPattern, scoreDistribution } = stats;
+  const { overall, confidenceDistribution } = stats;
 
   return (
     <div className={styles.overview}>
@@ -268,7 +314,7 @@ function OverviewPanel({ stats, loading, onRefresh }) {
             <div className={styles.queueHeader}>
               <span className={styles.queueCount}>{activeSegments.length} segment(s) ready</span>
               <button
-                onClick={runAnalysis}
+                onClick={handleRunAnalysisClick}
                 className={styles.runAnalysisButton}
                 disabled={analyzing}
               >
@@ -278,7 +324,10 @@ function OverviewPanel({ stats, loading, onRefresh }) {
             <div className={styles.queueList}>
               {activeSegments.slice(0, 5).map(seg => (
                 <div key={seg.id} className={styles.queueItem}>
-                  <span className={styles.queueItemAirport}>{seg.airport} - {seg.facility}</span>
+                  <div className={styles.queueItemInfo}>
+                    <span className={styles.queueItemAirport}>{seg.airport} - {seg.facility}</span>
+                    <span className={styles.queueItemId}>ID: {seg.id}</span>
+                  </div>
                   <span className={styles.queueItemDuration}>{seg.duration_seconds?.toFixed(1)}s</span>
                 </div>
               ))}
@@ -299,86 +348,118 @@ function OverviewPanel({ stats, loading, onRefresh }) {
           value={overall.total_segments}
         />
         <StatCard
-          title="Analyzed"
-          value={overall.analyzed_segments}
-          subtitle={overall.total_segments > 0 ? `${((overall.analyzed_segments / overall.total_segments) * 100).toFixed(0)}% of total` : ''}
+          title="Transcribed"
+          value={overall.transcribed_segments}
+          subtitle={overall.total_segments > 0 ? `${((overall.transcribed_segments / overall.total_segments) * 100).toFixed(0)}% of total` : ''}
         />
         <StatCard
-          title="High Interest"
-          value={overall.high_interest_segments}
-          subtitle={overall.analyzed_segments > 0 ? `${((overall.high_interest_segments / overall.analyzed_segments) * 100).toFixed(0)}% of analyzed` : ''}
-          highlight="warning"
-        />
-        <StatCard
-          title="Unique Patterns"
-          value={overall.unique_patterns_detected}
-          subtitle="Different types detected"
+          title="High Confidence (RLHF)"
+          value={overall.rlhf_candidates}
+          subtitle={overall.transcribed_segments > 0 ? `${((overall.rlhf_candidates / overall.transcribed_segments) * 100).toFixed(0)}% of transcribed` : ''}
           highlight="success"
+        />
+        <StatCard
+          title="Processed for RLHF"
+          value={overall.processed_for_rlhf}
+          subtitle={overall.rlhf_candidates > 0 ? `${((overall.processed_for_rlhf / overall.rlhf_candidates) * 100).toFixed(0)}% of candidates` : ''}
+          highlight="warning"
         />
       </div>
 
       {/* Quality Metrics */}
       <div className={styles.metricsGrid}>
         <MetricCard
-          title="Average Audio Score"
-          value={overall.avg_audio_score !== null ? `${(overall.avg_audio_score * 100).toFixed(1)}%` : 'N/A'}
-          range="Interest level (0-100%)"
+          title="Average Confidence"
+          value={overall.avg_confidence !== null ? `${(overall.avg_confidence * 100).toFixed(1)}%` : 'N/A'}
+          range="Transcription confidence (0-100%)"
         />
         <MetricCard
-          title="High Interest Threshold"
-          value="≥65%"
-          range="Segments worth reviewing"
+          title="RLHF Threshold"
+          value="≥90%"
+          range="High confidence segments"
         />
       </div>
 
-      {/* Score Distribution */}
+      {/* Confidence Distribution */}
       <div className={styles.section}>
-        <h3>Audio Interest Distribution</h3>
+        <h3>Confidence Distribution</h3>
         <div className={styles.severityChart}>
           <SeverityBar
-            label="High (≥65%)"
-            count={scoreDistribution.high}
-            color="red"
+            label="High (≥90%) - RLHF"
+            count={confidenceDistribution.high}
+            color="blue"
           />
           <SeverityBar
-            label="Medium (35-64%)"
-            count={scoreDistribution.medium}
-            color="orange"
-          />
-          <SeverityBar
-            label="Low (10-34%)"
-            count={scoreDistribution.low}
+            label="Medium (70-89%) - Human Review"
+            count={confidenceDistribution.medium}
             color="yellow"
           />
           <SeverityBar
-            label="Routine (<10%)"
-            count={scoreDistribution.routine}
-            color="blue"
+            label="Low (<70%) - Human Review"
+            count={confidenceDistribution.low}
+            color="red"
           />
         </div>
       </div>
 
-      {/* Pattern Breakdown */}
-      {byPattern && byPattern.length > 0 && (
-        <div className={styles.section}>
-          <h3>Detected Patterns</h3>
-          <div className={styles.categoryTable}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Pattern</th>
-                  <th>Occurrences</th>
-                </tr>
-              </thead>
-              <tbody>
-                {byPattern.map((p) => (
-                  <tr key={p.pattern}>
-                    <td className={styles.categoryName}>{formatPatternName(p.pattern)}</td>
-                    <td><strong>{p.count}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Pipeline Summary */}
+      <div className={styles.section}>
+        <h3>Pipeline Summary</h3>
+        <div className={styles.categoryTable}>
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Count</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className={styles.categoryName}>High Confidence</td>
+                <td><strong>{overall.rlhf_candidates}</strong></td>
+                <td>RLHF Training Data</td>
+              </tr>
+              <tr>
+                <td className={styles.categoryName}>Needs Human Review</td>
+                <td><strong>{overall.needs_human_review}</strong></td>
+                <td>SFT Training Data</td>
+              </tr>
+              <tr>
+                <td className={styles.categoryName}>Ready for Ranking</td>
+                <td><strong>{overall.processed_for_rlhf}</strong></td>
+                <td>Human Preference Pairs</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowConfirmModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3>Confirm Analysis</h3>
+            <p>
+              Run audio analysis on {activeSegments.length} segment(s)?
+            </p>
+            <p className={styles.modalSubtext}>
+              This will take approximately {activeSegments.length * 30} seconds.
+            </p>
+            <div className={styles.modalButtons}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className={styles.modalCancelButton}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={runAnalysis}
+                className={styles.modalConfirmButton}
+              >
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -425,9 +506,3 @@ function SeverityBar({ label, count, color }) {
   );
 }
 
-function formatPatternName(pattern) {
-  return pattern
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}

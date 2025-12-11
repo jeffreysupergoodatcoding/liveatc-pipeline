@@ -48,7 +48,7 @@ export default function AudioUpload() {
     const audioExtensions = ['.mp3', '.wav', '.m4a', '.flac'];
 
     return audioTypes.includes(file.type) ||
-           audioExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      audioExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
   }
 
   async function analyzeAudio() {
@@ -92,7 +92,7 @@ export default function AudioUpload() {
       <div className={styles.header}>
         <h3>Upload & Analyze Audio</h3>
         <p className={styles.subtitle}>
-          Upload aviation radio communication audio to detect edge cases in real-time
+          Upload aviation radio communication audio for transcription and confidence-based routing
         </p>
       </div>
 
@@ -157,7 +157,8 @@ export default function AudioUpload() {
 }
 
 function AnalysisResult({ result, onReset }) {
-  const severity = getSeverityLevel(result.edgeCaseScore);
+  const confidence = result.transcription?.confidence || 0;
+  const routing = confidence >= 0.90 ? 'rlhf' : 'review';
 
   return (
     <div className={styles.result}>
@@ -168,23 +169,23 @@ function AnalysisResult({ result, onReset }) {
         </button>
       </div>
 
-      {/* Overall Score */}
+      {/* Transcription Confidence & Routing */}
       <div className={styles.scoreSection}>
-        <h5>Edge Case Score</h5>
+        <h5>Transcription Confidence</h5>
         <div className={styles.scoreDisplay}>
-          <div className={styles.scoreCircle} data-severity={severity}>
+          <div className={styles.scoreCircle} data-severity={confidence >= 0.90 ? 'low' : confidence >= 0.70 ? 'medium' : 'high'}>
             <span className={styles.scoreValue}>
-              {(result.edgeCaseScore * 100).toFixed(0)}
+              {(confidence * 100).toFixed(0)}
             </span>
-            <span className={styles.scoreLabel}>/ 100</span>
+            <span className={styles.scoreLabel}>%</span>
           </div>
           <div className={styles.scoreInfo}>
-            <div className={styles.severityBadge} data-severity={severity}>
-              {severity.toUpperCase()}
+            <div className={styles.severityBadge} data-severity={confidence >= 0.90 ? 'low' : confidence >= 0.70 ? 'medium' : 'high'}>
+              {confidence >= 0.90 ? 'HIGH CONFIDENCE' : confidence >= 0.70 ? 'MEDIUM' : 'LOW CONFIDENCE'}
             </div>
-            {result.flagged && (
-              <div className={styles.flaggedBadge}>Flagged for Review</div>
-            )}
+            <div className={routing === 'rlhf' ? styles.rlhfBadge : styles.reviewBadge}>
+              {routing === 'rlhf' ? '→ RLHF Pipeline' : '→ Human Review'}
+            </div>
           </div>
         </div>
       </div>
@@ -203,41 +204,6 @@ function AnalysisResult({ result, onReset }) {
                 )}
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Detected Edge Cases */}
-      {result.detectedEdgeCases && result.detectedEdgeCases.length > 0 && (
-        <div className={styles.section}>
-          <h5>Detected Edge Cases ({result.detectedEdgeCases.length})</h5>
-          <div className={styles.edgeCases}>
-            {result.detectedEdgeCases.map((edgeCase, i) => (
-              <div key={i} className={styles.edgeCase}>
-                <div className={styles.edgeCaseHeader}>
-                  <span className={styles.edgeCaseName}>{edgeCase.name}</span>
-                  <span
-                    className={styles.edgeCaseSeverity}
-                    data-severity={getSeverityLevel(edgeCase.severity)}
-                  >
-                    {(edgeCase.severity * 100).toFixed(0)}
-                  </span>
-                </div>
-                <div className={styles.edgeCaseCategory}>
-                  {formatCategory(edgeCase.category)}
-                </div>
-                <div className={styles.edgeCaseMeta}>
-                  <span>Match: {edgeCase.match_type}</span>
-                  <span>Confidence: {(edgeCase.confidence * 100).toFixed(0)}%</span>
-                </div>
-                {edgeCase.evidence && (
-                  <details className={styles.evidence}>
-                    <summary>View Evidence</summary>
-                    <pre>{JSON.stringify(edgeCase.evidence, null, 2)}</pre>
-                  </details>
-                )}
-              </div>
-            ))}
           </div>
         </div>
       )}
@@ -278,13 +244,6 @@ function AnalysisResult({ result, onReset }) {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {result.detectedEdgeCases?.length === 0 && (
-        <div className={styles.noIssues}>
-          <h5>No Edge Cases Detected</h5>
-          <p>The audio appears to contain standard aviation communications</p>
         </div>
       )}
     </div>

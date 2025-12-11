@@ -107,18 +107,6 @@ export default function FlaggedSegments() {
     <div className={styles.container}>
       <div className={styles.filters}>
         <div className={styles.filterGroup}>
-          <label>Min Score</label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={filters.minScore}
-            onChange={(e) => setFilters({ ...filters, minScore: parseFloat(e.target.value) })}
-          />
-          <span className={styles.scoreValue}>{filters.minScore.toFixed(1)}</span>
-        </div>
-        <div className={styles.filterGroup}>
           <label>Routing</label>
           <select
             value={filters.routing}
@@ -157,7 +145,7 @@ export default function FlaggedSegments() {
           <div className={styles.content}>
             <div className={styles.segmentList}>
               <div className={styles.listHeader}>
-                <h4>{segments.length} Low Confidence Segments (Human Review)</h4>
+                <h4>{segments.length} Low Confidence Segments</h4>
               </div>
               {segments.map((segment) => (
                 <SegmentCard
@@ -224,6 +212,7 @@ function SegmentCard({ segment, selected, onClick }) {
         <div className={styles.cardInfo}>
           <span className={styles.airport}>{segment.airport} - {segment.facility}</span>
           <span className={styles.date}>{new Date(segment.recorded_at).toLocaleString()}</span>
+          <span className={styles.segmentId}>ID: {segment.id}</span>
         </div>
         <div className={styles.scoreDisplay}>
           <div className={styles.score} data-severity={getSeverityLevel(segment.transcription_confidence || 0)}>
@@ -295,6 +284,9 @@ function SegmentDetails({
           <h4>Segment Details</h4>
           <p className={styles.segmentMeta}>
             {segment.airport} - {segment.facility} • {new Date(segment.recorded_at).toLocaleString()}
+          </p>
+          <p className={styles.segmentId}>
+            ID: {segment.id}
           </p>
         </div>
         <button onClick={onClose} className={styles.closeButton}>×</button>

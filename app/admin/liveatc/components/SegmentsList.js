@@ -137,6 +137,34 @@ export default function SegmentsList({ recording, onBack }) {
     }
   }
 
+  async function processForRLHF(segmentId) {
+    try {
+      const response = await fetch('/api/process-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segmentId })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(`Error: ${result.error || 'Failed to process segment'}`);
+        return;
+      }
+
+      if (result.status === 'high_confidence') {
+        alert(`✅ Success!\n\nGenerated ${result.variations.length} variations\nConfidence: ${(result.confidence * 100).toFixed(2)}%\nStatus: Ready for ranking`);
+      } else {
+        alert(`⚠️ Low Confidence\n\nConfidence: ${(result.confidence * 100).toFixed(2)}%\nStatus: Needs human review`);
+      }
+
+      await fetchSegments();
+    } catch (error) {
+      console.error('Error processing for RLHF:', error);
+      alert(`Error: ${error.message}`);
+    }
+  }
+
   function toggleSelectSegment(segmentId) {
     const newSelected = new Set(selectedSegments);
     if (newSelected.has(segmentId)) {
@@ -224,6 +252,7 @@ export default function SegmentsList({ recording, onBack }) {
                 <th>Quality</th>
                 <th>Confidence</th>
                 <th>Routing</th>
+                <th>RLHF Status</th>
                 <th>Size</th>
                 <th>Labels</th>
                 <th>Status</th>
@@ -272,6 +301,23 @@ export default function SegmentsList({ recording, onBack }) {
                       <span className={`${styles.routing} ${routingClass}`}>
                         {routingLabel}
                       </span>
+                    </td>
+                    <td>
+                      {segment.status === 'needs_ranking' ? (
+                        <span className={`${styles.rlhfStatus} ${styles.success}`}>
+                          ✓ Ready for Ranking
+                        </span>
+                      ) : segment.rlhf_candidate ? (
+                        <button
+                          onClick={() => processForRLHF(segment.id)}
+                          className={styles.rlhfButton}
+                          title="Process with 3 models for RLHF"
+                        >
+                          🎯 Process
+                        </button>
+                      ) : (
+                        <span className={styles.rlhfStatus}>-</span>
+                      )}
                     </td>
                     <td>{formatFileSize(segment.file_size_bytes)}</td>
                     <td>{segment.label_count}</td>

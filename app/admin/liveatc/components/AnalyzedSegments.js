@@ -134,12 +134,20 @@ function SegmentDetails({ segment, onClose }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [loadingAudio, setLoadingAudio] = useState(true);
   const [audioError, setAudioError] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const [modelOutputs, setModelOutputs] = useState(null);
+  const [loadingOutputs, setLoadingOutputs] = useState(false);
+  const [segmentStatus, setSegmentStatus] = useState(segment?.status);
 
   useEffect(() => {
     if (segment?.id) {
       fetchAudioUrl();
+      setSegmentStatus(segment.status);
+      if (segment.status === 'needs_ranking') {
+        fetchModelOutputs();
+      }
     }
-  }, [segment?.id]);
+  }, [segment?.id, segment?.status]);
 
   async function fetchAudioUrl() {
     setLoadingAudio(true);
@@ -173,6 +181,56 @@ function SegmentDetails({ segment, onClose }) {
     }
   }
 
+  async function fetchModelOutputs() {
+    setLoadingOutputs(true);
+    try {
+      const { data, error } = await supabase
+        .from('model_outputs')
+        .select('*')
+        .eq('segment_id', segment.id)
+        .single();
+
+      if (error) throw error;
+      setModelOutputs(data);
+    } catch (error) {
+      console.error('Error fetching model outputs:', error);
+      setModelOutputs(null);
+    } finally {
+      setLoadingOutputs(false);
+    }
+  }
+
+  async function processForRLHF() {
+    setProcessing(true);
+    try {
+      const response = await fetch('/api/process-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segmentId: segment.id })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(`Error: ${result.error || 'Failed to process segment'}`);
+        return;
+      }
+
+      // Successfully processed - update status and fetch model outputs
+      if (result.status === 'high_confidence') {
+        setSegmentStatus('needs_ranking');
+        // Fetch the updated model outputs
+        await fetchModelOutputs();
+      }
+
+    } catch (error) {
+      console.error('Error processing for RLHF:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setProcessing(false);
+    }
+  }
+
   return (
     <div className={styles.details}>
       <div className={styles.detailsHeader}>
@@ -181,11 +239,73 @@ function SegmentDetails({ segment, onClose }) {
           <p className={styles.segmentMeta}>
             {segment.airport} - {segment.facility} • {new Date(segment.recorded_at).toLocaleString()}
           </p>
+          <p className={styles.segmentId}>
+            ID: {segment.id}
+          </p>
         </div>
         <button onClick={onClose} className={styles.closeButton}>×</button>
       </div>
 
       <div className={styles.detailsBody}>
+        {/* RLHF Processing Status */}
+        <section>
+          <h5>RLHF Status</h5>
+          <div className={styles.rlhfSection}>
+            {segmentStatus === 'needs_ranking' ? (
+              <div className={styles.rlhfSuccess}>
+                <span className={styles.rlhfBadge}>✓ Ready for Ranking</span>
+                <p>This segment has been processed with 3 different models and is ready for human ranking.</p>
+              </div>
+            ) : (
+              <div className={styles.rlhfPending}>
+                <button
+                  onClick={processForRLHF}
+                  disabled={processing}
+                  className={styles.rlhfProcessButton}
+                >
+                  {processing ? 'Processing...' : 'Process for RLHF'}
+                </button>
+                <p className={styles.rlhfDescription}>
+                  Generate 3 model variations (nova-2, enhanced, base) for human ranking
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Model Variations - Only show if processed */}
+        {segmentStatus === 'needs_ranking' && modelOutputs && (
+          <section>
+            <h5>Model Variations</h5>
+            {loadingOutputs ? (
+              <p className={styles.loadingAudio}>Loading variations...</p>
+            ) : (
+              <div className={styles.variationsContainer}>
+                {modelOutputs.variations.map((variation, index) => (
+                  <div key={index} className={styles.variationCard}>
+                    <div className={styles.variationHeader}>
+                      <span className={styles.variationRank}>#{variation.rank_position}</span>
+                      <div className={styles.variationModel}>
+                        <span className={styles.modelName}>{variation.model}</span>
+                        <span className={styles.modelDesc}>{variation.model_description}</span>
+                      </div>
+                      <div className={styles.variationConfidence}>
+                        <span className={styles.confidenceValue}>{(variation.confidence * 100).toFixed(2)}%</span>
+                        <span className={styles.confidenceLabel}>
+                          {variation.confidence >= 0.90 ? 'High' : variation.confidence >= 0.70 ? 'Medium' : 'Low'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.variationText}>
+                      {variation.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Transcription Confidence Score */}
         <section>
           <h5>Transcription Confidence</h5>

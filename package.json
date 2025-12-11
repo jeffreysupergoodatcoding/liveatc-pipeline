@@ -9,6 +9,7 @@
     "upload": "node scripts/upload-to-supabase.js",
     "detect": "node scripts/detect-edge-cases.js",
     "pipeline": "node scripts/scheduled-pipeline.js",
+    "process-rlhf": "node scripts/process-high-confidence.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"

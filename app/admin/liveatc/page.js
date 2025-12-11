@@ -6,12 +6,11 @@ import { formatDate, formatDuration, formatFileSize } from '../../../lib/utils/f
 import RecordingsList from './components/RecordingsList';
 import SegmentsList from './components/SegmentsList';
 import LabeledClipsList from './components/LabeledClipsList';
-import Statistics from './components/Statistics';
 import EdgeCasesDashboard from './components/EdgeCasesDashboard';
 import styles from './page.module.css';
 
 export default function LiveATCAdmin() {
-  const [view, setView] = useState('recordings'); // 'recordings', 'segments', 'labeledClips', 'statistics', 'edgeCases'
+  const [view, setView] = useState('recordings'); // 'recordings', 'segments', 'labeledClips', 'edgeCases'
   const [selectedRecording, setSelectedRecording] = useState(null);
 
   return (
@@ -36,15 +35,6 @@ export default function LiveATCAdmin() {
             }}
           >
             Labeled Clips
-          </button>
-          <button
-            className={`${styles.navButton} ${view === 'statistics' ? styles.active : ''}`}
-            onClick={() => {
-              setView('statistics');
-              setSelectedRecording(null);
-            }}
-          >
-            Statistics
           </button>
           <button
             className={`${styles.navButton} ${view === 'edgeCases' ? styles.active : ''}`}
@@ -77,8 +67,6 @@ export default function LiveATCAdmin() {
         )}
 
         {view === 'labeledClips' && <LabeledClipsList />}
-
-        {view === 'statistics' && <Statistics />}
 
         {view === 'edgeCases' && <EdgeCasesDashboard />}
       </main>

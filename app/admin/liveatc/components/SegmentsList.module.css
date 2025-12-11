@@ -254,3 +254,49 @@
   background-color: rgba(107, 114, 128, 0.15);
   color: #6b7280;
 }
+
+/* RLHF Processing */
+.rlhfButton {
+  padding: 0.375rem 0.75rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.rlhfButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.rlhfButton:active {
+  transform: translateY(0);
+}
+
+.rlhfStatus {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: #e9ecef;
+  color: #6c757d;
+}
+
+.rlhfStatus.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.danger {
+  background-color: #dc3545;
+}
+
+.danger:hover {
+  background-color: #c82333;
+}

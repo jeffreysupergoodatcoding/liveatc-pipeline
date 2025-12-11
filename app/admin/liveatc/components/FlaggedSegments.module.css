@@ -723,3 +723,170 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* RLHF Processing Section */
+.rlhfSection {
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.rlhfSuccess {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rlhfBadge {
+  display: inline-block;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  width: fit-content;
+}
+
+.rlhfSuccess p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.rlhfPending {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rlhfProcessButton {
+  padding: 12px 24px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: fit-content;
+}
+
+.rlhfProcessButton:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.rlhfProcessButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rlhfDescription {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Model Variations Display */
+.variationsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.variationCard {
+  padding: 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.variationCard:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.variationHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.variationRank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.variationModel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.variationModel .modelName {
+  font-weight: 600;
+  color: #3b82f6;
+  font-size: 14px;
+}
+
+.variationModel .modelDesc {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.variationConfidence {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.confidenceValue {
+  font-weight: 700;
+  font-size: 16px;
+  color: #111827;
+}
+
+.confidenceLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.variationText {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  border-left: 4px solid #3b82f6;
+}
+/* Segment ID Display */
+.segmentId {
+  margin: 4px 0 0 0;
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
+}
