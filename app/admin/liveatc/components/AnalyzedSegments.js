@@ -8,6 +8,7 @@ export default function AnalyzedSegments() {
   const [segments, setSegments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSegment, setSelectedSegment] = useState(null);
+  const [filter, setFilter] = useState('all'); // 'all', 'with_variants', 'without_variants'
 
   useEffect(() => {
     fetchAnalyzedSegments();
@@ -27,12 +28,26 @@ export default function AnalyzedSegments() {
 
       if (error) throw error;
 
-      // Transform to flat structure
-      const flatSegments = data.map(segment => ({
-        ...segment,
-        airport: segment.recordings.airport,
-        facility: segment.recordings.facility,
-        recorded_at: segment.recordings.recorded_at
+      // Transform to flat structure and fetch model outputs count
+      const flatSegments = await Promise.all(data.map(async (segment) => {
+        // Check if this segment has model outputs
+        const { data: outputs, error: outputError } = await supabase
+          .from('model_outputs')
+          .select('id, variations')
+          .eq('segment_id', segment.id)
+          .limit(1);
+
+        const hasVariants = outputs && outputs.length > 0 && outputs[0].variations && outputs[0].variations.length > 0;
+        const variantCount = hasVariants ? outputs[0].variations.length : 0;
+
+        return {
+          ...segment,
+          airport: segment.recordings.airport,
+          facility: segment.recordings.facility,
+          recorded_at: segment.recordings.recorded_at,
+          hasVariants,
+          variantCount
+        };
       }));
 
       setSegments(flatSegments);
@@ -43,6 +58,15 @@ export default function AnalyzedSegments() {
       setLoading(false);
     }
   }
+
+  const filteredSegments = segments.filter(segment => {
+    if (filter === 'with_variants') return segment.hasVariants;
+    if (filter === 'without_variants') return !segment.hasVariants;
+    return true; // 'all'
+  });
+
+  const withVariantsCount = segments.filter(s => s.hasVariants).length;
+  const withoutVariantsCount = segments.filter(s => !s.hasVariants).length;
 
   if (loading) {
     return <div className={styles.loading}>Loading analyzed segments...</div>;
@@ -59,12 +83,33 @@ export default function AnalyzedSegments() {
 
   return (
     <div className={styles.container}>
+      <div className={styles.filterTabs}>
+        <button
+          className={`${styles.filterTab} ${filter === 'all' ? styles.activeTab : ''}`}
+          onClick={() => setFilter('all')}
+        >
+          All ({segments.length})
+        </button>
+        <button
+          className={`${styles.filterTab} ${filter === 'with_variants' ? styles.activeTab : ''}`}
+          onClick={() => setFilter('with_variants')}
+        >
+          With Variants ({withVariantsCount})
+        </button>
+        <button
+          className={`${styles.filterTab} ${filter === 'without_variants' ? styles.activeTab : ''}`}
+          onClick={() => setFilter('without_variants')}
+        >
+          Need Processing ({withoutVariantsCount})
+        </button>
+      </div>
+
       <div className={styles.content}>
         <div className={styles.segmentList}>
           <div className={styles.listHeader}>
-            <h4>Analyzed Segments ({segments.length})</h4>
+            <h4>Analyzed Segments ({filteredSegments.length})</h4>
           </div>
-          {segments.map(segment => (
+          {filteredSegments.map(segment => (
             <SegmentCard
               key={segment.id}
               segment={segment}
@@ -79,6 +124,7 @@ export default function AnalyzedSegments() {
             <SegmentDetails
               segment={selectedSegment}
               onClose={() => setSelectedSegment(null)}
+              onRefresh={fetchAnalyzedSegments}
             />
           ) : (
             <div className={styles.empty}>
@@ -115,6 +161,19 @@ function SegmentCard({ segment, isSelected, onClick }) {
         </div>
       </div>
 
+      {/* Variant Status Badge */}
+      <div className={styles.variantStatus}>
+        {segment.hasVariants ? (
+          <span className={styles.variantBadge} data-status="ready">
+            ✓ {segment.variantCount} Variants Generated
+          </span>
+        ) : (
+          <span className={styles.variantBadge} data-status="pending">
+            ⚠ Need Processing
+          </span>
+        )}
+      </div>
+
       {/* Show Transcription for High Confidence */}
       {segment.transcription && (
         <div className={styles.transcription}>
@@ -130,7 +189,7 @@ function SegmentCard({ segment, isSelected, onClick }) {
   );
 }
 
-function SegmentDetails({ segment, onClose }) {
+function SegmentDetails({ segment, onClose, onRefresh }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [loadingAudio, setLoadingAudio] = useState(true);
   const [audioError, setAudioError] = useState(null);
@@ -221,6 +280,10 @@ function SegmentDetails({ segment, onClose }) {
         setSegmentStatus('needs_ranking');
         // Fetch the updated model outputs
         await fetchModelOutputs();
+        // Refresh the parent list to update variant counts
+        if (onRefresh) {
+          onRefresh();
+        }
       }
 
     } catch (error) {

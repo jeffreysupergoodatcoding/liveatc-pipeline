@@ -158,7 +158,7 @@ export default function AudioUpload() {
 
 function AnalysisResult({ result, onReset }) {
   const confidence = result.transcription?.confidence || 0;
-  const routing = confidence >= 0.90 ? 'rlhf' : 'review';
+  const routing = confidence >= 0.85 ? 'rlhf' : 'review';
 
   return (
     <div className={styles.result}>
@@ -173,15 +173,15 @@ function AnalysisResult({ result, onReset }) {
       <div className={styles.scoreSection}>
         <h5>Transcription Confidence</h5>
         <div className={styles.scoreDisplay}>
-          <div className={styles.scoreCircle} data-severity={confidence >= 0.90 ? 'low' : confidence >= 0.70 ? 'medium' : 'high'}>
+          <div className={styles.scoreCircle} data-severity={confidence >= 0.85 ? 'low' : confidence >= 0.70 ? 'medium' : 'high'}>
             <span className={styles.scoreValue}>
               {(confidence * 100).toFixed(0)}
             </span>
             <span className={styles.scoreLabel}>%</span>
           </div>
           <div className={styles.scoreInfo}>
-            <div className={styles.severityBadge} data-severity={confidence >= 0.90 ? 'low' : confidence >= 0.70 ? 'medium' : 'high'}>
-              {confidence >= 0.90 ? 'HIGH CONFIDENCE' : confidence >= 0.70 ? 'MEDIUM' : 'LOW CONFIDENCE'}
+            <div className={styles.severityBadge} data-severity={confidence >= 0.85 ? 'low' : confidence >= 0.70 ? 'medium' : 'high'}>
+              {confidence >= 0.85 ? 'HIGH CONFIDENCE' : confidence >= 0.70 ? 'MEDIUM' : 'LOW CONFIDENCE'}
             </div>
             <div className={routing === 'rlhf' ? styles.rlhfBadge : styles.reviewBadge}>
               {routing === 'rlhf' ? '→ RLHF Pipeline' : '→ Human Review'}

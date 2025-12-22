@@ -201,6 +201,21 @@
   color: #c62828;
 }
 
+.deleteButton {
+  padding: 0.25rem 0.5rem;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.deleteButton:hover {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
 .activeButton,
 .inactiveButton {
   padding: 0.375rem 0.75rem;
@@ -245,6 +260,11 @@
   color: #22c55e;
 }
 
+.routing.analyzed {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
 .routing.warning {
   background-color: rgba(234, 179, 8, 0.15);
   color: #eab308;
@@ -255,10 +275,34 @@
   color: #6b7280;
 }
 
+/* Confidence Level */
+.confidenceLevel {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.confidenceLevel.confidenceHigh {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.confidenceLevel.confidenceLow {
+  background-color: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+
+.confidenceLevel.confidenceNone {
+  background-color: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+}
+
 /* RLHF Processing */
 .rlhfButton {
   padding: 0.375rem 0.75rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #667eea;
   color: white;
   border: none;
   border-radius: 0.375rem;

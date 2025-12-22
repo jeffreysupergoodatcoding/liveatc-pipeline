@@ -250,10 +250,9 @@ export default function SegmentsList({ recording, onBack }) {
                 <th>#</th>
                 <th>Duration</th>
                 <th>Quality</th>
-                <th>Confidence</th>
+                <th>Confidence %</th>
                 <th>Routing</th>
-                <th>RLHF Status</th>
-                <th>Size</th>
+                <th>Confidence</th>
                 <th>Labels</th>
                 <th>Status</th>
                 <th>Queue for Analysis</th>
@@ -267,14 +266,26 @@ export default function SegmentsList({ recording, onBack }) {
                   ? (segment.transcription_confidence * 100).toFixed(0) + '%'
                   : '-';
 
+                // Check if segment has been analyzed (has transcription confidence)
+                const isAnalyzed = segment.transcription_confidence !== null;
                 let routingLabel = 'Pending';
                 let routingClass = styles.pending;
-                if (segment.rlhf_candidate) {
-                  routingLabel = 'RLHF';
-                  routingClass = styles.success;
-                } else if (segment.needs_human_review) {
-                  routingLabel = 'Review';
-                  routingClass = styles.warning;
+                if (isAnalyzed) {
+                  routingLabel = 'Analyzed';
+                  routingClass = styles.analyzed;
+                }
+
+                // Determine confidence level (High or Low)
+                let confidenceLevel = '-';
+                let confidenceLevelClass = styles.confidenceNone;
+                if (segment.transcription_confidence !== null) {
+                  if (segment.transcription_confidence >= 0.85) {
+                    confidenceLevel = 'High';
+                    confidenceLevelClass = styles.confidenceHigh;
+                  } else {
+                    confidenceLevel = 'Low';
+                    confidenceLevelClass = styles.confidenceLow;
+                  }
                 }
 
                 return (
@@ -303,23 +314,10 @@ export default function SegmentsList({ recording, onBack }) {
                       </span>
                     </td>
                     <td>
-                      {segment.status === 'needs_ranking' ? (
-                        <span className={`${styles.rlhfStatus} ${styles.success}`}>
-                          ✓ Ready for Ranking
-                        </span>
-                      ) : segment.rlhf_candidate ? (
-                        <button
-                          onClick={() => processForRLHF(segment.id)}
-                          className={styles.rlhfButton}
-                          title="Process with 3 models for RLHF"
-                        >
-                          🎯 Process
-                        </button>
-                      ) : (
-                        <span className={styles.rlhfStatus}>-</span>
-                      )}
+                      <span className={`${styles.confidenceLevel} ${confidenceLevelClass}`}>
+                        {confidenceLevel}
+                      </span>
                     </td>
-                    <td>{formatFileSize(segment.file_size_bytes)}</td>
                     <td>{segment.label_count}</td>
                     <td>
                       <span className={`${styles.status} ${segment.active ? styles.active : styles.pending}`}>
@@ -360,7 +358,7 @@ export default function SegmentsList({ recording, onBack }) {
                         </button>
                         <button
                           onClick={() => deleteSegments([segment.id])}
-                          className={`${styles.actionButton} ${styles.danger}`}
+                          className={styles.deleteButton}
                           title="Delete"
                         >
                           🗑

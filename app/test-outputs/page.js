@@ -43,13 +43,13 @@ export default function TestOutputsPage() {
     };
 
     const getConfidenceColor = (confidence) => {
-        if (confidence > 0.90) return styles.confidenceHigh;
+        if (confidence > 0.85) return styles.confidenceHigh;
         if (confidence >= 0.70) return styles.confidenceMedium;
         return styles.confidenceLow;
     };
 
     const getConfidenceLabel = (confidence) => {
-        if (confidence > 0.90) return 'High';
+        if (confidence > 0.85) return 'High';
         if (confidence >= 0.70) return 'Medium';
         return 'Low';
     };

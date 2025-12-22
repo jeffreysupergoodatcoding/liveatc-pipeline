@@ -228,7 +228,7 @@ async function saveResults(segmentId, detectionResult, audioAnalysis = null, key
     // --- CONFIDENCE ROUTING LOGIC ---
     // If transcription confidence is high enough, mark as candidate for RLHF.
     // Otherwise, mark for human review (SFT).
-    const rlhfThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.90');
+    const rlhfThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.85');
     // We use the same threshold for decision boundary, but support separate ones if needed
 
     if (detectionResult.confidence >= rlhfThreshold) {
@@ -309,7 +309,7 @@ async function processSegment(segment, tempDir, index, total) {
     transcriptionResult = await transcribeAudio(tempPath);
     if (transcriptionResult) {
       console.log(`     Confidence: ${(transcriptionResult.confidence * 100).toFixed(1)}%`);
-      const rlhfThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.90');
+      const rlhfThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.85');
       if (transcriptionResult.confidence >= rlhfThreshold) {
         console.log(`     🎯 Routing: RLHF Candidate (≥ ${rlhfThreshold * 100}%)`);
       } else {
@@ -400,8 +400,8 @@ async function main() {
     // Summary
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
-    const rlhfCount = results.filter(r => r.transcriptionResult && r.transcriptionResult.confidence >= (parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.90'))).length;
-    const humanReviewCount = results.filter(r => r.transcriptionResult && r.transcriptionResult.confidence < (parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.90'))).length;
+    const rlhfCount = results.filter(r => r.transcriptionResult && r.transcriptionResult.confidence >= (parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.85'))).length;
+    const humanReviewCount = results.filter(r => r.transcriptionResult && r.transcriptionResult.confidence < (parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.85'))).length;
     const totalDuration = (Date.now() - startTime) / 1000;
 
     console.log('\n' + '═'.repeat(80));

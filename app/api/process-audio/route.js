@@ -15,8 +15,8 @@ import os from 'os';
  * }
  * 
  * Response:
- * - High confidence (>90%): { status: 'high_confidence', variations: [...], next_step: 'needs_ranking' }
- * - Low confidence (<=90%): { status: 'low_confidence', confidence: X, next_step: 'needs_human_review' }
+ * - High confidence (>=85%): { status: 'high_confidence', variations: [...], next_step: 'needs_ranking' }
+ * - Low confidence (<85%): { status: 'low_confidence', confidence: X, next_step: 'needs_human_review' }
  */
 export async function POST(request) {
   try {
@@ -100,6 +100,7 @@ export async function POST(request) {
           language: 'en',
           smart_format: true,
           punctuate: true,
+          words: true, // Enable word-level confidence and timestamps
           keywords: [
             'mayday:5',
             'pan-pan:5',
@@ -108,9 +109,10 @@ export async function POST(request) {
             'clearance:3',
             'altitude:3',
             'heading:3',
+            'emergency:4',
+            'traffic:3',
             'squawk:3',
             'TCAS:4',
-            'traffic:3',
             'hold short:4',
             'line up and wait:4',
             'cleared to land:4',
@@ -156,9 +158,20 @@ export async function POST(request) {
       }
 
       const alternative = alternatives[0];
+
+      // Extract word-level confidence if available
+      const words = alternative.words || [];
+      const wordConfidences = words.map(word => ({
+        word: word.word,
+        confidence: word.confidence,
+        start: word.start,
+        end: word.end
+      }));
+
       variations.push({
         text: alternative.transcript,
         confidence: alternative.confidence,
+        words: wordConfidences, // Add word-level confidence
         rank_position: rankPosition,
         model: modelUsed,
         model_description: modelDescription
@@ -178,8 +191,8 @@ export async function POST(request) {
     const primary = variations[0];
     const primaryConfidence = primary.confidence;
 
-    // Check confidence threshold
-    if (primaryConfidence > 0.90) {
+    // Check confidence threshold (85%)
+    if (primaryConfidence >= 0.85) {
       // High confidence - store for RLHF ranking
 
       // Update segment

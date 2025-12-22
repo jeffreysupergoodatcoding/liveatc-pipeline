@@ -33,8 +33,8 @@ export async function PATCH(request, { params }) {
 
     // If manual transcription provided, update it
     if (manualTranscription) {
-      updates.transcription = manualTranscription;
-      // updates.manual_transcription = true; // TODO: Add this column via migration
+      updates.transcription_text = manualTranscription;
+      updates.manual_transcription = true;
       console.log('Adding manual transcription to updates');
     }
 

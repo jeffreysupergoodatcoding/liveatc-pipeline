@@ -45,6 +45,13 @@ export default function LiveATCAdmin() {
           >
             Confidence Pipeline
           </button>
+          <a
+            href="/rank-outputs"
+            className={styles.navButton}
+            style={{ textDecoration: 'none' }}
+          >
+            Variant Test
+          </a>
         </nav>
       </header>
 

@@ -4,6 +4,65 @@
   height: 100%;
 }
 
+/* Filter Tabs */
+.filterTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 4px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.filterTab {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filterTab:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: #374151;
+}
+
+.filterTab.activeTab {
+  background: white;
+  color: #3b82f6;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Variant Status Badge */
+.variantStatus {
+  margin: 8px 0;
+}
+
+.variantBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.variantBadge[data-status="ready"] {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.variantBadge[data-status="pending"] {
+  background: #fef3c7;
+  color: #854d0e;
+}
+
 .filters {
   display: flex;
   gap: 16px;
@@ -883,6 +942,7 @@
   border-radius: 6px;
   border-left: 4px solid #3b82f6;
 }
+
 /* Segment ID Display */
 .segmentId {
   margin: 4px 0 0 0;

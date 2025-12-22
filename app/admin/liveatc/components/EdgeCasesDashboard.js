@@ -32,7 +32,7 @@ export default function EdgeCasesDashboard() {
       const transcribedSegments = segments.filter(s => s.transcription_confidence !== null);
       const transcribedCount = transcribedSegments.length;
 
-      // High Confidence (RLHF) - confidence >= 90%
+      // High Confidence (RLHF) - confidence >= 85%
       const rlhfCandidates = segments.filter(s => s.rlhf_candidate === true);
       const rlhfCount = rlhfCandidates.length;
 
@@ -40,7 +40,7 @@ export default function EdgeCasesDashboard() {
       const processedForRLHF = segments.filter(s => s.status === 'needs_ranking');
       const processedCount = processedForRLHF.length;
 
-      // Low Confidence (Human Review) - confidence < 90%
+      // Low Confidence (Human Review) - confidence < 85%
       const humanReviewSegments = segments.filter(s => s.needs_human_review === true);
       const humanReviewCount = humanReviewSegments.length;
 
@@ -51,8 +51,8 @@ export default function EdgeCasesDashboard() {
 
       // Confidence distribution
       const confidenceDistribution = {
-        high: transcribedSegments.filter(s => s.transcription_confidence >= 0.90).length,
-        medium: transcribedSegments.filter(s => s.transcription_confidence >= 0.70 && s.transcription_confidence < 0.90).length,
+        high: transcribedSegments.filter(s => s.transcription_confidence >= 0.85).length,
+        medium: transcribedSegments.filter(s => s.transcription_confidence >= 0.70 && s.transcription_confidence < 0.85).length,
         low: transcribedSegments.filter(s => s.transcription_confidence < 0.70).length
       };
 
@@ -198,7 +198,7 @@ function OverviewPanel({ stats, loading, onRefresh }) {
 
       // Poll for completion every 5 seconds
       let pollCount = 0;
-      const maxPolls = segmentCount * 8; // ~40 seconds per segment max
+      const maxPolls = activeSegments.length * 8; // ~40 seconds per segment max
 
       const pollInterval = setInterval(async () => {
         pollCount++;
@@ -375,7 +375,7 @@ function OverviewPanel({ stats, loading, onRefresh }) {
         />
         <MetricCard
           title="RLHF Threshold"
-          value="≥90%"
+          value="≥85%"
           range="High confidence segments"
         />
       </div>
@@ -385,12 +385,12 @@ function OverviewPanel({ stats, loading, onRefresh }) {
         <h3>Confidence Distribution</h3>
         <div className={styles.severityChart}>
           <SeverityBar
-            label="High (≥90%) - RLHF"
+            label="High (≥85%) - RLHF"
             count={confidenceDistribution.high}
             color="blue"
           />
           <SeverityBar
-            label="Medium (70-89%) - Human Review"
+            label="Medium (70-84%) - Human Review"
             count={confidenceDistribution.medium}
             color="yellow"
           />
