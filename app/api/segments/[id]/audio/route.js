@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
+import { logger } from '../../../../../lib/logger.js';
 
 /**
  * GET /api/segments/[id]/audio
@@ -35,11 +36,11 @@ export async function GET(request, { params }) {
       try {
         const testResponse = await fetch(publicData.publicUrl, { method: 'HEAD' });
         if (testResponse.ok) {
-          console.log('Using public URL');
+          logger.debug('Using public URL');
           return NextResponse.json({ url: publicData.publicUrl });
         }
       } catch (e) {
-        console.log('Public URL not accessible, trying signed URL');
+        logger.debug('Public URL not accessible, trying signed URL');
       }
     }
 
@@ -49,7 +50,7 @@ export async function GET(request, { params }) {
       .createSignedUrl(segment.file_path, 3600);
 
     if (error) {
-      console.error('Error creating signed URL:', error);
+      logger.error('Error creating signed URL:', error);
       return NextResponse.json(
         { error: 'Failed to generate audio URL' },
         { status: 500 }
@@ -58,7 +59,7 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({ url: data.signedUrl });
   } catch (error) {
-    console.error('Error getting audio URL:', error);
+    logger.error('Error getting audio URL:', error);
     return NextResponse.json(
       { error: 'Failed to get audio URL' },
       { status: 500 }

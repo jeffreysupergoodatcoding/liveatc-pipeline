@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../../lib/supabase-server.js';
+import { logger } from '../../../../lib/logger.js';
 
 /**
  * GET /api/segments/flagged
@@ -63,7 +64,7 @@ export async function GET(request) {
       total: count
     });
   } catch (error) {
-    console.error('Error getting flagged segments:', error);
+    logger.error('Error getting flagged segments:', error);
     return NextResponse.json(
       { error: 'Failed to get flagged segments' },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
+import { logger } from '../../../../../lib/logger.js';
 
 /**
  * POST /api/segments/[id]/activate
@@ -30,7 +31,7 @@ export async function POST(request, { params }) {
       .single();
 
     if (error) {
-      console.error('Error updating segment active status:', error);
+      logger.error('Error updating segment active status:', error);
       return NextResponse.json(
         { error: 'Failed to update segment' },
         { status: 500 }
@@ -39,7 +40,7 @@ export async function POST(request, { params }) {
 
     return NextResponse.json({ success: true, segment: data });
   } catch (error) {
-    console.error('Error in activate endpoint:', error);
+    logger.error('Error in activate endpoint:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

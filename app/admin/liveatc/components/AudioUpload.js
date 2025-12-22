@@ -59,23 +59,71 @@ export default function AudioUpload() {
     setResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append('audio', file);
+      // Step 1: Upload file to Supabase Storage
+      const timestamp = Date.now();
+      const fileName = `upload_${timestamp}_${file.name}`;
+      const filePath = `uploads/${fileName}`;
 
-      const response = await fetch('/api/segments/detect', {
+      // Create a Supabase client (we'll need to import this)
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      );
+
+      // Upload to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('liveatc-segments')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Step 2: Create a segment record
+      const { data: segment, error: segmentError } = await supabase
+        .from('segments')
+        .insert({
+          file_path: filePath,
+          duration_seconds: 0, // Will be updated after processing
+          active: false
+        })
+        .select()
+        .single();
+
+      if (segmentError) {
+        throw new Error(`Failed to create segment: ${segmentError.message}`);
+      }
+
+      // Step 3: Process with confidence pipeline
+      const response = await fetch('/api/process-audio', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segmentId: segment.id })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setResult(data);
+        // Transform the response to match the expected format
+        const transformedResult = {
+          transcription: {
+            text: data.variations?.[0]?.text || data.transcription || '',
+            confidence: data.confidence || data.variations?.[0]?.confidence || 0,
+            speaker_count: 1
+          },
+          audioAnalysis: {
+            duration: segment.duration_seconds || 0
+          },
+          routing: data.status === 'high_confidence' ? 'rlhf' : 'review',
+          segmentId: segment.id
+        };
+        setResult(transformedResult);
       } else {
         setError(data.error || 'Analysis failed');
       }
     } catch (err) {
-      setError('Network error: ' + err.message);
+      setError('Error: ' + err.message);
     } finally {
       setAnalyzing(false);
     }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../lib/supabase-server.js';
+import { logger } from '../../../lib/logger.js';
 
 interface ScoreSet {
     accuracy: number;
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
             .insert(preferencePairs);
 
         if (pairsError) {
-            console.error('Error inserting preference pairs:', pairsError);
+            logger.error('Error inserting preference pairs:', pairsError);
             return NextResponse.json(
                 { success: false, error: 'Failed to save preference pairs' },
                 { status: 500 }
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
             .eq('id', modelOutputId);
 
         if (updateError) {
-            console.error('Error updating model output:', updateError);
+            logger.error('Error updating model output:', updateError);
             return NextResponse.json(
                 { success: false, error: 'Failed to update model output' },
                 { status: 500 }
@@ -141,7 +142,7 @@ export async function POST(request: Request) {
             preferencePairsCreated: preferencePairs.length
         });
     } catch (error) {
-        console.error('Error processing ranking submission:', error);
+        logger.error('Error processing ranking submission:', error);
         return NextResponse.json(
             {
                 success: false,

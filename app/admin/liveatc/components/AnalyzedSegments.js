@@ -213,9 +213,7 @@ function SegmentDetails({ segment, onClose, onRefresh }) {
     setAudioUrl(null);
     setAudioError(null);
     try {
-      console.log('Fetching audio for segment:', segment.id);
       const response = await fetch(`/api/segments/${segment.id}/audio`);
-      console.log('Audio API response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -223,11 +221,9 @@ function SegmentDetails({ segment, onClose, onRefresh }) {
       }
 
       const data = await response.json();
-      console.log('Audio data received:', data);
 
       if (data.url) {
         setAudioUrl(data.url);
-        console.log('Audio URL set:', data.url);
       } else {
         throw new Error('No URL in response');
       }
@@ -493,8 +489,6 @@ function SegmentDetails({ segment, onClose, onRefresh }) {
                   console.error('Audio error message:', e.target.error?.message);
                   setAudioError(`Playback error: ${e.target.error?.message || 'Unknown error'}`);
                 }}
-                onLoadedMetadata={() => console.log('Audio metadata loaded')}
-                onCanPlay={() => console.log('Audio can play')}
               />
               <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
                 <a href={audioUrl} target="_blank" rel="noopener noreferrer">

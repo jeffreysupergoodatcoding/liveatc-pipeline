@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../../lib/supabase-server.js';
+import { logger } from '../../../../lib/logger.js';
 
 /**
  * POST /api/segments/process-batch
@@ -66,7 +67,7 @@ export async function POST(request) {
         });
 
     } catch (error) {
-        console.error('Error queuing batch processing:', error);
+        logger.error('Error queuing batch processing:', error);
         return NextResponse.json(
             {
                 error: 'Failed to queue batch processing',
@@ -106,7 +107,7 @@ export async function GET(request) {
         });
 
     } catch (error) {
-        console.error('Error checking eligible segments:', error);
+        logger.error('Error checking eligible segments:', error);
         return NextResponse.json(
             {
                 error: 'Failed to check eligible segments',

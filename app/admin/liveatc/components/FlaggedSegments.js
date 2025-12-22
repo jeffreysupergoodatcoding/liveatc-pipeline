@@ -49,12 +49,6 @@ export default function FlaggedSegments() {
       return;
     }
 
-    console.log('Submitting review:', {
-      approved,
-      manualTranscription,
-      contextNotes,
-      reviewNotes
-    });
 
     try {
       const response = await fetch(`/api/segments/${selectedSegment.id}/review`, {
@@ -69,8 +63,6 @@ export default function FlaggedSegments() {
         })
       });
 
-      console.log('Response status:', response.status);
-
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error response:', errorData);
@@ -79,7 +71,6 @@ export default function FlaggedSegments() {
       }
 
       const data = await response.json();
-      console.log('Review submitted successfully:', data);
 
       // Show success message
       alert(approved ? 'Segment approved and labeled!' : 'Segment rejected.');

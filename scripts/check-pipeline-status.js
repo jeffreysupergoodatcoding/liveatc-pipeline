@@ -123,7 +123,6 @@ const scripts = [
     'liveatc-recorder.js',
     'segment-audio.js',
     'upload-to-supabase.js',
-    'detect-edge-cases.js',
     'scheduled-pipeline.js',
     'process-high-confidence.js'
 ];

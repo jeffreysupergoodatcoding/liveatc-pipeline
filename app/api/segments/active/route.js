@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../../lib/supabase-server.js';
+import { logger } from '../../../../lib/logger.js';
 
 /**
  * GET /api/segments/active
@@ -39,7 +40,7 @@ export async function GET(request) {
       count: segments.length
     });
   } catch (error) {
-    console.error('Error getting active segments:', error);
+    logger.error('Error getting active segments:', error);
     return NextResponse.json(
       { error: 'Failed to get active segments' },
       { status: 500 }

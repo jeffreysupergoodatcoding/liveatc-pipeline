@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '../../../../lib/logger.js';
 
 export async function GET() {
     try {
@@ -52,7 +53,7 @@ export async function GET() {
             }
         });
     } catch (error) {
-        console.error('Error fetching stats:', error);
+        logger.error('Error fetching stats:', error);
         return NextResponse.json(
             {
                 success: false,

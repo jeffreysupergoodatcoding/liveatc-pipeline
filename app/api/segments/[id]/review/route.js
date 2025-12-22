@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../../../lib/supabase-server.js';
+import { logger } from '../../../../../lib/logger.js';
 
 /**
  * PATCH /api/segments/[id]/review
@@ -19,7 +20,7 @@ export async function PATCH(request, { params }) {
     const { id } = await params;
 
     const body = await request.json();
-    console.log('Review API received:', body);
+    logger.debug('Review API received:', body);
 
     const { reviewed, approved, notes, manualTranscription, contextNotes, reviewedBy } = body;
 
@@ -35,10 +36,10 @@ export async function PATCH(request, { params }) {
     if (manualTranscription) {
       updates.transcription_text = manualTranscription;
       updates.manual_transcription = true;
-      console.log('Adding manual transcription to updates');
+      logger.debug('Adding manual transcription to updates');
     }
 
-    console.log('Updating segment with:', updates);
+    logger.debug('Updating segment with:', updates);
 
     const { data: segment, error: updateError } = await supabase
       .from('segments')
@@ -48,15 +49,15 @@ export async function PATCH(request, { params }) {
       .single();
 
     if (updateError) {
-      console.error('Error updating segment:', updateError);
+      logger.error('Error updating segment:', updateError);
       throw updateError;
     }
 
-    console.log('Segment updated successfully');
+    logger.debug('Segment updated successfully');
 
     // If approved, create a segment label
     if (approved && manualTranscription) {
-      console.log('Creating segment label...');
+      logger.debug('Creating segment label...');
 
       const labelData = {
         segment_id: id,
@@ -67,23 +68,23 @@ export async function PATCH(request, { params }) {
         user_id: reviewedBy || null
       };
 
-      console.log('Label data:', labelData);
+      logger.debug('Label data:', labelData);
 
       const { error: labelError } = await supabase
         .from('segment_labels')
         .insert(labelData);
 
       if (labelError) {
-        console.error('Error creating segment label:', labelError);
+        logger.error('Error creating segment label:', labelError);
         // Don't fail the whole request if label creation fails
       } else {
-        console.log('Segment label created successfully');
+        logger.debug('Segment label created successfully');
       }
     }
 
     return NextResponse.json(segment);
   } catch (error) {
-    console.error('Error updating review status:', error);
+    logger.error('Error updating review status:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to update review status' },
       { status: 500 }
@@ -113,7 +114,7 @@ export async function GET(request, { params }) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error getting review details:', error);
+    logger.error('Error getting review details:', error);
     return NextResponse.json(
       { error: 'Failed to get review details' },
       { status: 500 }

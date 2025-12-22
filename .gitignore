@@ -7,6 +7,7 @@ recordings/
 dist/
 build/
 .DS_Store
+tsconfig.tsbuildinfo
 
 # Claude Code settings (may contain credentials)
 .claude/settings.local.json

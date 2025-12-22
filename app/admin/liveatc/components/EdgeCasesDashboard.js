@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import styles from './EdgeCasesDashboard.module.css';
-import TaxonomyViewer from './TaxonomyViewer';
 import FlaggedSegments from './FlaggedSegments';
 import AnalyzedSegments from './AnalyzedSegments';
-import CustomRules from './CustomRules';
 import AudioUpload from './AudioUpload';
 import { supabase } from '../../../../lib/supabase';
 
@@ -165,115 +163,96 @@ function OverviewPanel({ stats, loading, onRefresh }) {
   }
 
   function handleRunAnalysisClick() {
-    console.log('handleRunAnalysisClick called, activeSegments:', activeSegments);
-
     if (activeSegments.length === 0) {
       alert('No segments queued for analysis');
       return;
     }
 
-    console.log('Showing confirmation modal');
     setShowConfirmModal(true);
   }
 
   async function runAnalysis() {
-    console.log('runAnalysis confirmed, starting analysis');
     setShowConfirmModal(false);
 
     setAnalyzing(true);
     const processedSegmentIds = activeSegments.map(s => s.id);
 
     try {
-      const response = await fetch('/api/segments/analyze', {
-        method: 'POST'
-      });
+      // Process each segment through the confidence pipeline
+      let processedCount = 0;
+      let errorCount = 0;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to start analysis');
+      for (const segment of activeSegments) {
+        try {
+          const response = await fetch('/api/process-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ segmentId: segment.id })
+          });
+
+          if (response.ok) {
+            processedCount++;
+            // Deactivate segment after successful processing
+            await supabase
+              .from('segments')
+              .update({ active: false })
+              .eq('id', segment.id);
+          } else {
+            errorCount++;
+          }
+        } catch (error) {
+          console.error(`Error processing segment ${segment.id}:`, error);
+          errorCount++;
+        }
+
+        // Refresh stats after each segment
+        await fetchActiveSegments();
+        await onRefresh();
       }
 
-      const data = await response.json();
-      console.log('Analysis started:', data);
+      // Final refresh
+      await fetchActiveSegments();
+      await onRefresh();
 
-      // Poll for completion every 5 seconds
-      let pollCount = 0;
-      const maxPolls = activeSegments.length * 8; // ~40 seconds per segment max
+      // Fetch the processed segments to show routing results
+      const { data: processedSegments, error: processedError } = await supabase
+        .from('segments')
+        .select('id, transcription_confidence, rlhf_candidate, needs_human_review')
+        .in('id', processedSegmentIds);
 
-      const pollInterval = setInterval(async () => {
-        pollCount++;
+      if (processedError) {
+        console.error('Error fetching processed segments:', processedError);
+        alert(`Analysis complete! Processed ${processedCount} segments. Check the tabs for results.`);
+        setAnalyzing(false);
+        return;
+      }
 
-        try {
-          // Refresh active segments and stats
-          await fetchActiveSegments();
-          await onRefresh();
+      if (processedSegments && processedSegments.length > 0) {
+        const highConfidence = processedSegments.filter(s => s.rlhf_candidate === true);
+        const lowConfidence = processedSegments.filter(s => s.needs_human_review === true);
 
-          // Check if there are still active segments
-          const { data: currentActive, error: activeError } = await supabase
-            .from('segments')
-            .select('id')
-            .eq('active', true);
-
-          if (activeError) {
-            console.error('Error checking active segments:', activeError);
-            clearInterval(pollInterval);
-            setAnalyzing(false);
-            alert('Error checking analysis status. Please refresh the page.');
-            return;
-          }
-
-          if (!currentActive || currentActive.length === 0 || pollCount >= maxPolls) {
-            clearInterval(pollInterval);
-            setAnalyzing(false);
-
-            // Final refresh
-            await fetchActiveSegments();
-            await onRefresh();
-
-            if (pollCount < maxPolls) {
-              // Fetch the processed segments to show routing results
-              const { data: processedSegments, error: processedError } = await supabase
-                .from('segments')
-                .select('id, transcription_confidence, rlhf_candidate, needs_human_review')
-                .in('id', processedSegmentIds);
-
-              if (processedError) {
-                console.error('Error fetching processed segments:', processedError);
-                alert('Analysis complete! Check the tabs for results.');
-                return;
-              }
-
-              if (processedSegments && processedSegments.length > 0) {
-                const highConfidence = processedSegments.filter(s => s.rlhf_candidate === true);
-                const lowConfidence = processedSegments.filter(s => s.needs_human_review === true);
-
-                let message = '✓ Analysis Complete\n\n';
-                message += `Routing Results:\n`;
-                message += `  • ${highConfidence.length} → High Confidence (RLHF)\n`;
-                message += `  • ${lowConfidence.length} → Low Confidence (Human Review)\n\n`;
-
-                if (highConfidence.length > 0) {
-                  message += `High Confidence segments are ready for RLHF processing in the "High Confidence" tab.\n\n`;
-                }
-                if (lowConfidence.length > 0) {
-                  message += `Low Confidence segments need human review in the "Low Confidence" tab.`;
-                }
-
-                alert(message);
-              } else {
-                alert('Analysis complete! Check the tabs for results.');
-              }
-            } else {
-              alert('Analysis timed out. Some segments may still be processing. Please check the tabs and refresh.');
-            }
-          }
-        } catch (pollError) {
-          console.error('Error during polling:', pollError);
-          clearInterval(pollInterval);
-          setAnalyzing(false);
-          alert('Error during analysis. Please check the console and try again.');
+        let message = '✓ Analysis Complete\n\n';
+        message += `Processed: ${processedCount} segments\n`;
+        if (errorCount > 0) {
+          message += `Errors: ${errorCount} segments\n`;
         }
-      }, 5000);
+        message += `\nRouting Results:\n`;
+        message += `  • ${highConfidence.length} → High Confidence (RLHF)\n`;
+        message += `  • ${lowConfidence.length} → Low Confidence (Human Review)\n\n`;
+
+        if (highConfidence.length > 0) {
+          message += `High Confidence segments are ready for RLHF processing in the "High Confidence" tab.\n\n`;
+        }
+        if (lowConfidence.length > 0) {
+          message += `Low Confidence segments need human review in the "Low Confidence" tab.`;
+        }
+
+        alert(message);
+      } else {
+        alert(`Analysis complete! Processed ${processedCount} segments. Check the tabs for results.`);
+      }
+
+      setAnalyzing(false);
     } catch (error) {
       console.error('Error running analysis:', error);
       alert(`Failed to start analysis: ${error.message}`);

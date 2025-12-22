@@ -4,6 +4,7 @@ import { createClient } from '@deepgram/sdk';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
+import { logger } from '../../../lib/logger.js';
 
 /**
  * POST /api/process-audio
@@ -59,7 +60,7 @@ export async function POST(request) {
       .download(segment.file_path);
 
     if (downloadError || !audioData) {
-      console.error('Error downloading audio:', downloadError);
+      logger.error('Error downloading audio:', downloadError);
       return NextResponse.json(
         { error: 'Failed to download audio file' },
         { status: 500 }
@@ -84,7 +85,7 @@ export async function POST(request) {
     // nova-2: Most accurate, latest model
     // enhanced: Balanced accuracy and speed
     // base: Faster, good baseline for comparison
-    console.log('Calling Deepgram API with 3 different models...');
+    logger.info('Calling Deepgram API with 3 different models...');
 
     const models = [
       { name: 'nova-2', description: 'Most accurate, latest model' },
@@ -135,7 +136,7 @@ export async function POST(request) {
 
     // Wait for all 3 transcriptions to complete
     const modelResults = await Promise.all(transcriptionPromises);
-    console.log(`Received ${modelResults.length} transcription responses from different models`);
+    logger.info(`Received ${modelResults.length} transcription responses from different models`);
 
     // Extract transcriptions from all responses
     const variations = [];
@@ -145,7 +146,7 @@ export async function POST(request) {
       const deepgramResults = result.results || result;
 
       if (!deepgramResults || !deepgramResults.channels || !deepgramResults.channels[0]) {
-        console.error(`Invalid response structure for model ${modelUsed}`);
+        logger.error(`Invalid response structure for model ${modelUsed}`);
         continue;
       }
 
@@ -153,7 +154,7 @@ export async function POST(request) {
       const alternatives = channel.alternatives || [];
 
       if (alternatives.length === 0) {
-        console.error(`No alternatives in response from model ${modelUsed}`);
+        logger.error(`No alternatives in response from model ${modelUsed}`);
         continue;
       }
 
@@ -185,7 +186,7 @@ export async function POST(request) {
       );
     }
 
-    console.log(`Successfully generated ${variations.length} variations from models: ${variations.map(v => v.model).join(', ')}`);
+    logger.info(`Successfully generated ${variations.length} variations from models: ${variations.map(v => v.model).join(', ')}`);
 
     // Use the first variation (nova-2) as primary since it's most accurate
     const primary = variations[0];
@@ -206,7 +207,7 @@ export async function POST(request) {
         .eq('id', segmentId);
 
       if (updateError) {
-        console.error('Error updating segment:', updateError);
+        logger.error('Error updating segment:', updateError);
         return NextResponse.json(
           { error: 'Failed to update segment' },
           { status: 500 }
@@ -223,7 +224,7 @@ export async function POST(request) {
         });
 
       if (insertError) {
-        console.error('Error inserting model outputs:', insertError);
+        logger.error('Error inserting model outputs:', insertError);
         return NextResponse.json(
           { error: 'Failed to store model outputs' },
           { status: 500 }
@@ -252,7 +253,7 @@ export async function POST(request) {
         .eq('id', segmentId);
 
       if (updateError) {
-        console.error('Error updating segment:', updateError);
+        logger.error('Error updating segment:', updateError);
         return NextResponse.json(
           { error: 'Failed to update segment' },
           { status: 500 }
@@ -270,7 +271,7 @@ export async function POST(request) {
     }
 
   } catch (error) {
-    console.error('Error processing audio:', error);
+    logger.error('Error processing audio:', error);
     return NextResponse.json(
       {
         error: 'Failed to process audio',

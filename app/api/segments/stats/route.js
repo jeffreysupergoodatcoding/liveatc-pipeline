@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../../lib/supabase-server.js';
+import { logger } from '../../../../lib/logger.js';
 
 /**
  * GET /api/segments/stats
@@ -18,7 +19,7 @@ export async function GET() {
       .select('audio_analysis_score, detected_patterns');
 
     if (segmentsError) {
-      console.error('Error querying segments:', segmentsError);
+      logger.error('Error querying segments:', segmentsError);
       throw segmentsError;
     }
 
@@ -77,7 +78,7 @@ export async function GET() {
       scoreDistribution
     });
   } catch (error) {
-    console.error('Error getting statistics:', error);
+    logger.error('Error getting statistics:', error);
     return NextResponse.json(
       { error: 'Failed to get statistics' },
       { status: 500 }
