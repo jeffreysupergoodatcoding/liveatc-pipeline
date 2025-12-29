@@ -19,6 +19,7 @@ const __dirname = dirname(__filename);
  */
 
 const FEED_CONFIGS = {
+  // JFK - New York
   kjfk_twr2: {
     airport: 'KJFK',
     facility: 'tower2',
@@ -34,15 +35,122 @@ const FEED_CONFIGS = {
     facility: 'ground',
     url: 'http://d.liveatc.net/kjfk_gnd'
   },
+
+  // Houston Hobby (KHOU)
+  khou_gnd_twr_app: {
+    airport: 'KHOU',
+    facility: 'gnd_twr_app',
+    url: 'http://d.liveatc.net/khou'
+  },
+
+  // Houston George Bush Intercontinental (KIAH)
+  kiah_twr: {
+    airport: 'KIAH',
+    facility: 'tower',
+    url: 'http://d.liveatc.net/kiah1_1'
+  },
+  kiah_gnd_n: {
+    airport: 'KIAH',
+    facility: 'gnd_north',
+    url: 'http://d.liveatc.net/kiah2_gnd_n'
+  },
+  kiah_gnd_s: {
+    airport: 'KIAH',
+    facility: 'gnd_south',
+    url: 'http://d.liveatc.net/kiah2_gnd_s'
+  },
+  kiah_gnd_w: {
+    airport: 'KIAH',
+    facility: 'gnd_west',
+    url: 'http://d.liveatc.net/kiah2_gnd_w'
+  },
+  kiah_app: {
+    airport: 'KIAH',
+    facility: 'approach',
+    url: 'http://d.liveatc.net/kiah1_2'
+  },
+
+  // San Francisco (KSFO)
   ksfo_gnd: {
     airport: 'KSFO',
     facility: 'ground',
     url: 'http://d.liveatc.net/ksfo_gnd'
   },
-  kord_gnd: {
-    airport: 'KORD',
+  ksfo_twr: {
+    airport: 'KSFO',
+    facility: 'tower',
+    url: 'http://d.liveatc.net/ksfo_twr'
+  },
+  ksfo_gnd_twr: {
+    airport: 'KSFO',
+    facility: 'gnd_twr',
+    url: 'http://d.liveatc.net/ksfo_gnd_twr'
+  },
+  ksfo_dep1: {
+    airport: 'KSFO',
+    facility: 'departure',
+    url: 'http://d.liveatc.net/ksfo_dep1'
+  },
+
+  // Austin (KAUS)
+  kaus_gnd: {
+    airport: 'KAUS',
     facility: 'ground',
-    url: 'http://d.liveatc.net/kord_gnd'
+    url: 'http://d.liveatc.net/kaus3_gnd'
+  },
+  kaus_twr: {
+    airport: 'KAUS',
+    facility: 'tower',
+    url: 'http://d.liveatc.net/kaus3_twr'
+  },
+  kaus_app_dep: {
+    airport: 'KAUS',
+    facility: 'app_dep',
+    url: 'http://d.liveatc.net/kaus3_app_dep'
+  },
+
+  // Newark (KEWR)
+  kewr_gnd: {
+    airport: 'KEWR',
+    facility: 'ground',
+    url: 'http://d.liveatc.net/kewr_gnd_pri'
+  },
+  kewr_twr: {
+    airport: 'KEWR',
+    facility: 'tower',
+    url: 'http://d.liveatc.net/kewr_twr'
+  },
+  kewr_app_final: {
+    airport: 'KEWR',
+    facility: 'app_final',
+    url: 'http://d.liveatc.net/kewr_app_final'
+  },
+  kewr_dep: {
+    airport: 'KEWR',
+    facility: 'departure',
+    url: 'http://d.liveatc.net/kewr_dep'
+  },
+
+  // LaGuardia (KLGA)
+  klga_gnd: {
+    airport: 'KLGA',
+    facility: 'ground',
+    url: 'http://d.liveatc.net/klga_gnd'
+  },
+  klga_twr: {
+    airport: 'KLGA',
+    facility: 'tower',
+    url: 'http://d.liveatc.net/klga_twr'
+  },
+  klga_ny_app: {
+    airport: 'KLGA',
+    facility: 'approach',
+    url: 'http://d.liveatc.net/klga_ny_app'
+  },
+  klga_ny_dep: {
+    airport: 'KLGA',
+    facility: 'departure',
+    url: 'http://d.liveatc.net/klga_ny_dep'
   }
 };
 
@@ -106,9 +214,18 @@ async function recordStream(config, duration) {
 
   // Use abbreviated facility name (ground -> gnd, tower -> twr, etc.)
   const facilityAbbrev = facility === 'ground' ? 'gnd' :
-                         facility === 'tower' ? 'twr' :
-                         facility === 'tower2' ? 'twr2' :
-                         facility.substring(0, 3);
+    facility === 'tower' ? 'twr' :
+      facility === 'tower2' ? 'twr2' :
+        facility === 'approach' ? 'app' :
+          facility === 'departure' ? 'dep' :
+            facility === 'gnd_twr' ? 'gnd_twr' :
+              facility === 'gnd_twr_app' ? 'gnd_twr_app' :
+                facility === 'app_dep' ? 'app_dep' :
+                  facility === 'app_final' ? 'app_final' :
+                    facility === 'gnd_north' ? 'gnd_n' :
+                      facility === 'gnd_south' ? 'gnd_s' :
+                        facility === 'gnd_west' ? 'gnd_w' :
+                          facility.substring(0, 3);
 
   const filename = `${airport.toLowerCase()}_${facilityAbbrev}_${timestamp}.mp3`;
 

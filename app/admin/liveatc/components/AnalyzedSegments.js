@@ -23,7 +23,7 @@ export default function AnalyzedSegments() {
           *,
           recordings!inner(airport, facility, recorded_at)
         `)
-        .eq('rlhf_candidate', true)  // Only show high confidence segments (>= 85%)
+        .eq('rlhf_candidate', true)  // Only show high confidence segments (>= 90%)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -39,6 +39,8 @@ export default function AnalyzedSegments() {
 
         const hasVariants = outputs && outputs.length > 0 && outputs[0].variations && outputs[0].variations.length > 0;
         const variantCount = hasVariants ? outputs[0].variations.length : 0;
+
+        console.log(`Segment ${segment.id.substring(0, 8)}: outputs=${outputs?.length || 0}, variants=${variantCount}`);
 
         return {
           ...segment,
@@ -165,7 +167,7 @@ function SegmentCard({ segment, isSelected, onClick }) {
       <div className={styles.variantStatus}>
         {segment.hasVariants ? (
           <span className={styles.variantBadge} data-status="ready">
-            ✓ {segment.variantCount} Variants Generated
+            ✓ {segment.variantCount} Variant{segment.variantCount !== 1 ? 's' : ''} Generated
           </span>
         ) : (
           <span className={styles.variantBadge} data-status="pending">
@@ -175,9 +177,9 @@ function SegmentCard({ segment, isSelected, onClick }) {
       </div>
 
       {/* Show Transcription for High Confidence */}
-      {segment.transcription && (
+      {segment.transcription_text && (
         <div className={styles.transcription}>
-          {segment.transcription.substring(0, 150)}...
+          {segment.transcription_text.substring(0, 150)}...
         </div>
       )}
 
@@ -243,10 +245,13 @@ function SegmentDetails({ segment, onClose, onRefresh }) {
         .from('model_outputs')
         .select('*')
         .eq('segment_id', segment.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (error) throw error;
-      setModelOutputs(data);
+
+      // data is an array with limit(1), get first item
+      setModelOutputs(data && data.length > 0 ? data[0] : null);
     } catch (error) {
       console.error('Error fetching model outputs:', error);
       setModelOutputs(null);
@@ -258,6 +263,32 @@ function SegmentDetails({ segment, onClose, onRefresh }) {
   async function processForRLHF() {
     setProcessing(true);
     try {
+      // Check if already has model outputs but just needs status update
+      const { data: existingOutputs } = await supabase
+        .from('model_outputs')
+        .select('id')
+        .eq('segment_id', segment.id)
+        .single();
+
+      if (existingOutputs) {
+        // Already has outputs, just update status
+        const { error: updateError } = await supabase
+          .from('segments')
+          .update({ status: 'needs_ranking' })
+          .eq('id', segment.id);
+
+        if (updateError) {
+          alert(`Error: ${updateError.message}`);
+          return;
+        }
+
+        setSegmentStatus('needs_ranking');
+        await fetchModelOutputs();
+        if (onRefresh) onRefresh();
+        return;
+      }
+
+      // Need to generate variations
       const response = await fetch('/api/process-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -274,12 +305,8 @@ function SegmentDetails({ segment, onClose, onRefresh }) {
       // Successfully processed - update status and fetch model outputs
       if (result.status === 'high_confidence') {
         setSegmentStatus('needs_ranking');
-        // Fetch the updated model outputs
         await fetchModelOutputs();
-        // Refresh the parent list to update variant counts
-        if (onRefresh) {
-          onRefresh();
-        }
+        if (onRefresh) onRefresh();
       }
 
     } catch (error) {
@@ -313,7 +340,7 @@ function SegmentDetails({ segment, onClose, onRefresh }) {
             {segmentStatus === 'needs_ranking' ? (
               <div className={styles.rlhfSuccess}>
                 <span className={styles.rlhfBadge}>✓ Ready for Ranking</span>
-                <p>This segment has been processed with 3 different models and is ready for human ranking.</p>
+                <p>This segment has been processed with {modelOutputs?.variations?.length || 3} different models and is ready for human ranking.</p>
               </div>
             ) : (
               <div className={styles.rlhfPending}>
@@ -453,11 +480,11 @@ function SegmentDetails({ segment, onClose, onRefresh }) {
         )}
 
         {/* Transcription */}
-        {segment.transcription && (
+        {segment.transcription_text && (
           <section>
             <h5>Transcription</h5>
             <div className={styles.transcriptionBox}>
-              <p>{segment.transcription}</p>
+              <p>{segment.transcription_text}</p>
               {segment.transcription_confidence && (
                 <div className={styles.confidence}>
                   Confidence: {(segment.transcription_confidence * 100).toFixed(1)}%

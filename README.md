@@ -65,26 +65,37 @@ SUPABASE_KEY=your-anon-key
 SUPABASE_SERVICE_KEY=your-service-role-key
 
 LIVEATC_FEEDS='[
-  {"airport": "KJFK", "facility": "ground", "url": "http://d.liveatc.net/kjfk_gnd"}
+  {"airport": "KJFK", "facility": "ground", "url": "http://d.liveatc.net/kjfk_gnd"},
+  {"airport": "KSFO", "facility": "ground", "url": "http://d.liveatc.net/ksfo_gnd"},
+  {"airport": "KIAH", "facility": "tower", "url": "http://d.liveatc.net/kiah1_1"}
 ]'
 
 RECORDING_DURATION=60
 RECORDING_SCHEDULE="0 * * * *"
 ```
 
-**Important:** Start with `RECORDING_DURATION=60` (1 minute) for testing!
+**Important:** 
+- Start with `RECORDING_DURATION=60` (1 minute) for testing!
+- See `FEEDS.md` for a complete list of all 31 available feeds across 7 airports
 
 ## Testing the Pipeline
 
 ### Test 1: Record Audio (1 minute test)
 
 ```bash
+# Test with JFK Ground
 node scripts/liveatc-recorder.js --feed kjfk_gnd --duration 60
+
+# Or test with San Francisco Ground
+node scripts/liveatc-recorder.js --feed ksfo_gnd --duration 60
+
+# Or test with Houston Bush Tower
+node scripts/liveatc-recorder.js --feed kiah_twr --duration 60
 ```
 
 This will:
-- Record 1 minute of audio from KJFK Ground
-- Save to `recordings/raw/kjfk_gnd_YYYYMMDD_HHMMSS.mp3`
+- Record 1 minute of audio from the selected feed
+- Save to `recordings/raw/[airport]_[facility]_YYYYMMDD_HHMMSS.mp3`
 - Output metadata as JSON
 
 **Expected output:**
@@ -267,6 +278,12 @@ Records audio from LiveATC streams.
 # Using predefined feed
 node scripts/liveatc-recorder.js --feed kjfk_gnd --duration 600
 
+# Record from San Francisco Tower
+node scripts/liveatc-recorder.js --feed ksfo_twr --duration 600
+
+# Record from Newark Approach
+node scripts/liveatc-recorder.js --feed kewr_app_final --duration 600
+
 # Custom feed
 node scripts/liveatc-recorder.js \
   --airport KJFK \
@@ -276,11 +293,22 @@ node scripts/liveatc-recorder.js \
 ```
 
 **Options:**
-- `--feed`: Predefined feed name (kjfk_gnd, kjfk_twr, ksfo_gnd, kord_gnd)
-- `--airport`: Airport code (e.g., KJFK)
-- `--facility`: Facility type (ground, tower, etc.)
+- `--feed`: Predefined feed name (see `FEEDS.md` for all 31 available feeds)
+- `--airport`: Airport code (e.g., KJFK, KSFO, KIAH, KAUS, KEWR, KLGA, KHOU)
+- `--facility`: Facility type (ground, tower, approach, departure, etc.)
 - `--url`: LiveATC stream URL
 - `--duration`: Recording duration in seconds (default: 600)
+
+**Available Airports:**
+- KJFK (JFK) - 3 feeds
+- KHOU (Houston Hobby) - 1 feed
+- KIAH (Houston Bush) - 5 feeds
+- KSFO (San Francisco) - 4 feeds
+- KAUS (Austin) - 3 feeds
+- KEWR (Newark) - 4 feeds
+- KLGA (LaGuardia) - 4 feeds
+
+See `FEEDS.md` for complete details on all available feeds.
 
 ### segment-audio.js
 

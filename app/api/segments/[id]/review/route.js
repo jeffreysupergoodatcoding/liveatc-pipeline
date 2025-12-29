@@ -35,7 +35,6 @@ export async function PATCH(request, { params }) {
     // If manual transcription provided, update it
     if (manualTranscription) {
       updates.transcription_text = manualTranscription;
-      updates.manual_transcription = true;
       logger.debug('Adding manual transcription to updates');
     }
 
@@ -79,6 +78,18 @@ export async function PATCH(request, { params }) {
         // Don't fail the whole request if label creation fails
       } else {
         logger.debug('Segment label created successfully');
+
+        // Update segment to remove from human review queue
+        const { error: flagError } = await supabase
+          .from('segments')
+          .update({ needs_human_review: false })
+          .eq('id', id);
+
+        if (flagError) {
+          logger.error('Error updating needs_human_review flag:', flagError);
+        } else {
+          logger.debug('Segment removed from human review queue');
+        }
       }
     }
 

@@ -2,6 +2,12 @@
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+
+  /* Color variables for charts */
+  --color-blue: #3b82f6;
+  --color-yellow: #f59e0b;
+  --color-red: #ef4444;
+  --color-green: #10b981;
 }
 
 .header {
@@ -228,10 +234,11 @@
 }
 
 .severityLabel {
-  width: 80px;
+  width: 200px;
   font-size: 14px;
   font-weight: 500;
   color: #374151;
+  flex-shrink: 0;
 }
 
 .severityBarContainer {
@@ -244,8 +251,9 @@
 
 .severityBarFill {
   height: 100%;
+  min-width: 4px;
   transition: width 0.3s ease;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .severityCount {
@@ -470,6 +478,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -490,6 +499,7 @@
     transform: translateY(20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -553,4 +563,3 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
 }
-

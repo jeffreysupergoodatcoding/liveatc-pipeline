@@ -23,7 +23,7 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Query segments that need human review (confidence < 85%)
+    // Query segments that need human review (confidence < 90%)
     let query = supabase
       .from('segments')
       .select(`

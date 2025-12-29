@@ -219,6 +219,21 @@
   color: #721c24;
 }
 
+.status.rlhf {
+  background-color: #cfe2ff;
+  color: #084298;
+}
+
+.status.sft {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+.status.review {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
 .viewButton {
   padding: 0.5rem 1rem;
   background-color: #0070f3;

@@ -119,21 +119,25 @@ export default function SegmentsList({ recording, onBack }) {
     }
   }
 
-  async function toggleActive(segmentId, currentActive) {
+  async function toggleQueue(segmentId, currentStatus) {
     try {
-      const response = await fetch(`/api/segments/${segmentId}/activate`, {
+      // Toggle between 'pending' (in queue) and 'active' (not in queue)
+      const inQueue = currentStatus !== 'pending';
+
+      const response = await fetch(`/api/segments/${segmentId}/queue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !currentActive })
+        body: JSON.stringify({ inQueue })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to toggle active status');
+        throw new Error('Failed to toggle queue status');
       }
 
       await fetchSegments();
     } catch (error) {
-      console.error('Error toggling active status:', error);
+      console.error('Error toggling queue status:', error);
+      alert('Failed to update queue status');
     }
   }
 
@@ -320,17 +324,17 @@ export default function SegmentsList({ recording, onBack }) {
                     </td>
                     <td>{segment.label_count}</td>
                     <td>
-                      <span className={`${styles.status} ${segment.active ? styles.active : styles.pending}`}>
-                        {segment.active ? 'Active' : 'Ready'}
+                      <span className={`${styles.status} ${segment.status === 'pending' ? styles.pending : styles.active}`}>
+                        {segment.status || 'Ready'}
                       </span>
                     </td>
                     <td>
                       <button
-                        onClick={() => toggleActive(segment.id, segment.active)}
-                        className={segment.active ? styles.activeButton : styles.inactiveButton}
-                        title={segment.active ? "Remove from analysis queue" : "Add to analysis queue"}
+                        onClick={() => toggleQueue(segment.id, segment.status)}
+                        className={segment.status === 'pending' ? styles.activeButton : styles.inactiveButton}
+                        title={segment.status === 'pending' ? "Remove from analysis queue" : "Add to analysis queue"}
                       >
-                        {segment.active ? '✓ Queued' : 'Queue'}
+                        {segment.status === 'pending' ? '✓ Queued' : 'Queue'}
                       </button>
                     </td>
                     <td>

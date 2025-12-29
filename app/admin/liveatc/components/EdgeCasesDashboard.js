@@ -30,7 +30,7 @@ export default function EdgeCasesDashboard() {
       const transcribedSegments = segments.filter(s => s.transcription_confidence !== null);
       const transcribedCount = transcribedSegments.length;
 
-      // High Confidence (RLHF) - confidence >= 85%
+      // High Confidence (RLHF) - confidence >= 90%
       const rlhfCandidates = segments.filter(s => s.rlhf_candidate === true);
       const rlhfCount = rlhfCandidates.length;
 
@@ -38,7 +38,7 @@ export default function EdgeCasesDashboard() {
       const processedForRLHF = segments.filter(s => s.status === 'needs_ranking');
       const processedCount = processedForRLHF.length;
 
-      // Low Confidence (Human Review) - confidence < 85%
+      // Low Confidence (Human Review) - confidence < 90%
       const humanReviewSegments = segments.filter(s => s.needs_human_review === true);
       const humanReviewCount = humanReviewSegments.length;
 
@@ -49,8 +49,8 @@ export default function EdgeCasesDashboard() {
 
       // Confidence distribution
       const confidenceDistribution = {
-        high: transcribedSegments.filter(s => s.transcription_confidence >= 0.85).length,
-        medium: transcribedSegments.filter(s => s.transcription_confidence >= 0.70 && s.transcription_confidence < 0.85).length,
+        high: transcribedSegments.filter(s => s.transcription_confidence >= 0.90).length,
+        medium: transcribedSegments.filter(s => s.transcription_confidence >= 0.70 && s.transcription_confidence < 0.90).length,
         low: transcribedSegments.filter(s => s.transcription_confidence < 0.70).length
       };
 
@@ -126,6 +126,8 @@ function OverviewPanel({ stats, loading, onRefresh }) {
   const [loadingActive, setLoadingActive] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState('');
 
   useEffect(() => {
     fetchActiveSegments();
@@ -140,7 +142,7 @@ function OverviewPanel({ stats, loading, onRefresh }) {
           *,
           recordings!inner(airport, facility, recorded_at)
         `)
-        .eq('active', true)
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -175,15 +177,18 @@ function OverviewPanel({ stats, loading, onRefresh }) {
     setShowConfirmModal(false);
 
     setAnalyzing(true);
-    const processedSegmentIds = activeSegments.map(s => s.id);
+    const segmentsToProcess = [...activeSegments]; // Clone the array to prevent mutation issues
+    const processedSegmentIds = segmentsToProcess.map(s => s.id);
 
     try {
       // Process each segment through the confidence pipeline
       let processedCount = 0;
       let errorCount = 0;
+      const successfulSegmentIds = [];
 
-      for (const segment of activeSegments) {
+      for (const segment of segmentsToProcess) {
         try {
+          console.log(`Processing segment ${segment.id}...`);
           const response = await fetch('/api/process-audio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -191,23 +196,34 @@ function OverviewPanel({ stats, loading, onRefresh }) {
           });
 
           if (response.ok) {
+            const result = await response.json();
+            console.log(`✓ Segment ${segment.id} processed successfully:`, result.status);
             processedCount++;
-            // Deactivate segment after successful processing
-            await supabase
-              .from('segments')
-              .update({ active: false })
-              .eq('id', segment.id);
+            successfulSegmentIds.push(segment.id);
           } else {
+            const errorData = await response.json();
+            console.error(`✗ Segment ${segment.id} failed:`, errorData);
             errorCount++;
           }
         } catch (error) {
           console.error(`Error processing segment ${segment.id}:`, error);
           errorCount++;
         }
+      }
 
-        // Refresh stats after each segment
-        await fetchActiveSegments();
-        await onRefresh();
+      // Update all successfully processed segments to 'active' status (removes from queue)
+      if (successfulSegmentIds.length > 0) {
+        console.log(`Updating ${successfulSegmentIds.length} successfully processed segments...`);
+        const { error: deactivateError } = await supabase
+          .from('segments')
+          .update({ status: 'active' })
+          .in('id', successfulSegmentIds);
+
+        if (deactivateError) {
+          console.error('Error deactivating segments:', deactivateError);
+        } else {
+          console.log(`✓ Successfully deactivated ${successfulSegmentIds.length} segments`);
+        }
       }
 
       // Final refresh
@@ -247,7 +263,8 @@ function OverviewPanel({ stats, loading, onRefresh }) {
           message += `Low Confidence segments need human review in the "Low Confidence" tab.`;
         }
 
-        alert(message);
+        setAnalysisResults(message);
+        setShowResultsModal(true);
       } else {
         alert(`Analysis complete! Processed ${processedCount} segments. Check the tabs for results.`);
       }
@@ -354,7 +371,7 @@ function OverviewPanel({ stats, loading, onRefresh }) {
         />
         <MetricCard
           title="RLHF Threshold"
-          value="≥85%"
+          value="≥90%"
           range="High confidence segments"
         />
       </div>
@@ -364,18 +381,21 @@ function OverviewPanel({ stats, loading, onRefresh }) {
         <h3>Confidence Distribution</h3>
         <div className={styles.severityChart}>
           <SeverityBar
-            label="High (≥85%) - RLHF"
+            label="High (≥90%) - RLHF"
             count={confidenceDistribution.high}
+            total={overall.transcribed_segments}
             color="blue"
           />
           <SeverityBar
-            label="Medium (70-84%) - Human Review"
+            label="Medium (70-89%) - Human Review"
             count={confidenceDistribution.medium}
+            total={overall.transcribed_segments}
             color="yellow"
           />
           <SeverityBar
             label="Low (<70%) - Human Review"
             count={confidenceDistribution.low}
+            total={overall.transcribed_segments}
             color="red"
           />
         </div>
@@ -442,6 +462,33 @@ function OverviewPanel({ stats, loading, onRefresh }) {
           </div>
         </div>
       )}
+
+      {/* Results Modal */}
+      {showResultsModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowResultsModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3>✓ Analysis Complete</h3>
+            <pre style={{
+              whiteSpace: 'pre-wrap',
+              fontFamily: 'inherit',
+              fontSize: '14px',
+              lineHeight: '1.6',
+              margin: '16px 0',
+              textAlign: 'left'
+            }}>
+              {analysisResults}
+            </pre>
+            <div className={styles.modalButtons}>
+              <button
+                onClick={() => setShowResultsModal(false)}
+                className={styles.modalConfirmButton}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -470,14 +517,29 @@ function MetricCard({ title, value, range }) {
   );
 }
 
-function SeverityBar({ label, count, color }) {
+function SeverityBar({ label, count, color, total }) {
+  // Calculate percentage of total, with minimum width for visibility
+  const percentage = total > 0 ? (count / total) * 100 : 0;
+  const width = count > 0 ? Math.max(percentage, 5) : 0; // Minimum 5% width when count > 0
+
+  // Map color names to hex values
+  const colorMap = {
+    blue: '#3b82f6',
+    yellow: '#f59e0b',
+    red: '#ef4444',
+    green: '#10b981'
+  };
+
   return (
     <div className={styles.severityRow}>
       <div className={styles.severityLabel}>{label}</div>
       <div className={styles.severityBarContainer}>
         <div
           className={styles.severityBarFill}
-          style={{ width: count > 0 ? `${Math.min(count * 2, 100)}%` : '0%', backgroundColor: `var(--color-${color})` }}
+          style={{
+            width: `${width}%`,
+            backgroundColor: colorMap[color] || '#6b7280'
+          }}
         />
       </div>
       <div className={styles.severityCount}>{count}</div>

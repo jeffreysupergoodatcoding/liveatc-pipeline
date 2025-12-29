@@ -16,8 +16,8 @@ import { logger } from '../../../lib/logger.js';
  * }
  * 
  * Response:
- * - High confidence (>=85%): { status: 'high_confidence', variations: [...], next_step: 'needs_ranking' }
- * - Low confidence (<85%): { status: 'low_confidence', confidence: X, next_step: 'needs_human_review' }
+ * - High confidence (>=90%): { status: 'high_confidence', variations: [...], next_step: 'needs_ranking' }
+ * - Low confidence (<90%): { status: 'low_confidence', confidence: X, next_step: 'needs_human_review' }
  */
 export async function POST(request) {
   try {
@@ -192,16 +192,21 @@ export async function POST(request) {
     const primary = variations[0];
     const primaryConfidence = primary.confidence;
 
-    // Check confidence threshold (85%)
-    if (primaryConfidence >= 0.85) {
+    // Check confidence threshold (default 90%, configurable via env)
+    const confidenceThreshold = parseFloat(process.env.CONFIDENCE_THRESHOLD_RLHF || '0.90');
+    logger.info(`Checking confidence ${primaryConfidence} against threshold ${confidenceThreshold}`);
+
+    if (primaryConfidence >= confidenceThreshold) {
       // High confidence - store for RLHF ranking
 
       // Update segment
       const { error: updateError } = await supabase
         .from('segments')
         .update({
-          transcription_text: primary.transcript,
+          transcription_text: primary.text,
           transcription_confidence: primaryConfidence,
+          rlhf_candidate: true,
+          needs_human_review: false,
           status: 'needs_ranking'
         })
         .eq('id', segmentId);
@@ -241,13 +246,15 @@ export async function POST(request) {
 
     } else {
       // Low confidence - flag for human review
+      // Still store the word-level data for UI visualization
 
       const { error: updateError } = await supabase
         .from('segments')
         .update({
-          transcription_text: primary.transcript,
+          transcription_text: primary.text,
           transcription_confidence: primaryConfidence,
           needs_human_review: true,
+          rlhf_candidate: false,
           status: 'needs_human_review'
         })
         .eq('id', segmentId);
@@ -260,10 +267,23 @@ export async function POST(request) {
         );
       }
 
+      // Store word-level data for review UI (just primary variation)
+      const { error: outputError } = await supabase
+        .from('model_outputs')
+        .insert({
+          segment_id: segmentId,
+          variations: [primary] // Just store primary for word-level confidence
+        });
+
+      if (outputError) {
+        logger.error('Error storing word-level data:', outputError);
+        // Don't fail the request, word visualization is optional
+      }
+
       return NextResponse.json({
         status: 'low_confidence',
         confidence: primaryConfidence,
-        transcription: primary.transcript,
+        transcription: primary.text,
         variations: variations,  // Include variations for debugging/review
         next_step: 'needs_human_review',
         message: 'Segment flagged for human review'
@@ -272,10 +292,13 @@ export async function POST(request) {
 
   } catch (error) {
     logger.error('Error processing audio:', error);
+    logger.error('Stack trace:', error.stack);
+    console.error('API Error:', error);
     return NextResponse.json(
       {
         error: 'Failed to process audio',
-        details: error.message
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       },
       { status: 500 }
     );
