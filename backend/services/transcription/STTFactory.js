@@ -1,4 +1,5 @@
 import { DeepgramProvider } from './DeepgramProvider.js';
+import { HuggingFaceProvider } from './HuggingFaceProvider.js';
 // Import other providers as they are implemented
 // import { WhisperProvider } from './WhisperProvider.js';
 // import { AssemblyAIProvider } from './AssemblyAIProvider.js';
@@ -10,6 +11,7 @@ import { DeepgramProvider } from './DeepgramProvider.js';
 export class STTFactory {
   static providers = {
     deepgram: DeepgramProvider,
+    huggingface: HuggingFaceProvider,
     // whisper: WhisperProvider,
     // assemblyai: AssemblyAIProvider,
   };
@@ -35,7 +37,7 @@ export class STTFactory {
 
   /**
    * Create provider from environment configuration
-   * Checks for DEEPGRAM_API_KEY, OPENAI_API_KEY, etc.
+   * Checks for DEEPGRAM_API_KEY, HUGGINGFACE_API_KEY, OPENAI_API_KEY, etc.
    * @param {string|null} preferredProvider - Preferred provider name (optional)
    * @returns {BaseSTTProvider}
    */
@@ -46,6 +48,11 @@ export class STTFactory {
     }
 
     // Auto-detect available provider from environment
+    // HuggingFace has priority over Deepgram
+    if (process.env.HUGGINGFACE_API_KEY) {
+      return this.create('huggingface');
+    }
+
     if (process.env.DEEPGRAM_API_KEY) {
       return this.create('deepgram');
     }
@@ -59,7 +66,7 @@ export class STTFactory {
     // }
 
     throw new Error(
-      'No STT provider configured. Please set one of: DEEPGRAM_API_KEY'
+      'No STT provider configured. Please set one of: DEEPGRAM_API_KEY, HUGGINGFACE_API_KEY'
     );
   }
 

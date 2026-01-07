@@ -5,6 +5,7 @@
 
 export { BaseSTTProvider } from './BaseSTTProvider.js';
 export { DeepgramProvider } from './DeepgramProvider.js';
+export { HuggingFaceProvider } from './HuggingFaceProvider.js';
 export { STTFactory, getSTTProvider } from './STTFactory.js';
 
 // Example usage:

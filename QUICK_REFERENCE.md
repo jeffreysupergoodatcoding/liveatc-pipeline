@@ -1,83 +1,192 @@
-# Quick Reference - LiveATC Feeds
+# 🚀 Quick Reference: HuggingFace STT Integration
 
-## Quick Test Commands
+## ⚡ Quick Start (3 Steps)
 
+### 1. Add Credentials to `.env`
 ```bash
-# Test different airports (5 second recordings)
-node scripts/liveatc-recorder.js --feed kjfk_gnd --duration 5      # JFK Ground
-node scripts/liveatc-recorder.js --feed ksfo_twr --duration 5      # SFO Tower
-node scripts/liveatc-recorder.js --feed kiah_app --duration 5      # Houston Bush Approach
-node scripts/liveatc-recorder.js --feed kaus_gnd --duration 5      # Austin Ground
-node scripts/liveatc-recorder.js --feed kewr_twr --duration 5      # Newark Tower
-node scripts/liveatc-recorder.js --feed klga_ny_dep --duration 5   # LaGuardia Departure
+HUGGINGFACE_API_KEY=hf_YOUR_TOKEN_HERE
+HUGGINGFACE_ENDPOINT=https://f5o4r0mj9o65mg4o.us-east4.gcp.endpoints.huggingface.cloud
 ```
 
-## Feed Codes by Airport
-
-### KJFK (3 feeds)
-- `kjfk_gnd` - Ground
-- `kjfk_twr` - Tower
-- `kjfk_twr2` - Tower 2
-
-### KHOU (1 feed)
-- `khou_gnd_twr_app` - Ground/Tower/Approach
-
-### KIAH (5 feeds)
-- `kiah_gnd_n` - Ground North
-- `kiah_gnd_s` - Ground South
-- `kiah_gnd_w` - Ground West
-- `kiah_twr` - Tower
-- `kiah_app` - Approach
-
-### KSFO (4 feeds)
-- `ksfo_gnd` - Ground
-- `ksfo_twr` - Tower
-- `ksfo_gnd_twr` - Ground/Tower
-- `ksfo_dep1` - Departure
-
-### KAUS (3 feeds)
-- `kaus_gnd` - Ground
-- `kaus_twr` - Tower
-- `kaus_app_dep` - Approach/Departure
-
-### KEWR (4 feeds)
-- `kewr_gnd` - Ground
-- `kewr_twr` - Tower
-- `kewr_app_final` - Approach Final
-- `kewr_dep` - Departure
-
-### KLGA (4 feeds)
-- `klga_gnd` - Ground
-- `klga_twr` - Tower
-- `klga_ny_app` - NY Approach
-- `klga_ny_dep` - NY Departure
-
-## Recommended Starter Feeds
-
-For diverse coverage, start with:
+### 2. Test It
 ```bash
-LIVEATC_FEEDS='[
-  {"airport": "KJFK", "facility": "ground", "url": "http://d.liveatc.net/kjfk_gnd"},
-  {"airport": "KSFO", "facility": "tower", "url": "http://d.liveatc.net/ksfo_twr"},
-  {"airport": "KIAH", "facility": "approach", "url": "http://d.liveatc.net/kiah1_2"},
-  {"airport": "KEWR", "facility": "ground", "url": "http://d.liveatc.net/kewr_gnd_pri"}
-]'
+node scripts/test-huggingface-stt.js your-audio-file.flac
 ```
 
-## Radio Type Coverage
-
-- **Ground**: kjfk_gnd, ksfo_gnd, kiah_gnd_n, kaus_gnd, kewr_gnd, klga_gnd
-- **Tower**: kjfk_twr, ksfo_twr, kiah_twr, kaus_twr, kewr_twr, klga_twr
-- **Approach**: kiah_app, klga_ny_app, kewr_app_final
-- **Departure**: ksfo_dep1, kewr_dep, klga_ny_dep
-- **Combined**: khou_gnd_twr_app, ksfo_gnd_twr, kaus_app_dep
-
-## List All Available Feeds
-
+### 3. Compare with Deepgram
 ```bash
-node scripts/liveatc-recorder.js
+node scripts/compare-stt-providers.js your-audio-file.flac
 ```
 
-## Full Documentation
+---
 
-See `FEEDS.md` for complete details on all feeds.
+## 📋 Common Commands
+
+### Check Provider Status
+```bash
+node scripts/switch-stt-provider.js status
+```
+
+### List Available Providers
+```bash
+node scripts/switch-stt-provider.js list
+```
+
+### Test HuggingFace
+```bash
+node scripts/test-huggingface-stt.js path/to/audio.mp3
+```
+
+### Compare Both Providers
+```bash
+node scripts/compare-stt-providers.js path/to/audio.mp3
+```
+
+---
+
+## 🔄 Switching Providers
+
+### Option A: Auto-detect (Easy)
+Just set the API key in `.env` and the system will auto-detect!
+
+**Use Deepgram:**
+```bash
+DEEPGRAM_API_KEY=your_key
+# HUGGINGFACE_API_KEY=commented_out
+```
+
+**Use HuggingFace:**
+```bash
+# DEEPGRAM_API_KEY=commented_out
+HUGGINGFACE_API_KEY=your_key
+```
+
+### Option B: Explicit Selection
+```bash
+PREFERRED_STT_PROVIDER=huggingface  # or 'deepgram'
+```
+
+### Option C: In Code
+```javascript
+const hf = getSTTProvider('huggingface');
+const dg = getSTTProvider('deepgram');
+```
+
+---
+
+## 💻 Code Examples
+
+### Basic Transcription
+```javascript
+import { getSTTProvider } from './backend/services/transcription/index.js';
+
+// Auto-detect provider
+const stt = getSTTProvider();
+const result = await stt.transcribe('audio.mp3');
+
+console.log(result.text);
+console.log(result.confidence);
+console.log(result.words);
+```
+
+### Explicit Provider
+```javascript
+// Use HuggingFace specifically
+const hf = getSTTProvider('huggingface');
+const result = await hf.transcribe('audio.mp3');
+```
+
+### Compare Results
+```javascript
+const hf = getSTTProvider('huggingface');
+const dg = getSTTProvider('deepgram');
+
+const [hfResult, dgResult] = await Promise.all([
+  hf.transcribe('audio.mp3'),
+  dg.transcribe('audio.mp3')
+]);
+
+console.log('HuggingFace:', hfResult.text);
+console.log('Deepgram:', dgResult.text);
+```
+
+---
+
+## 📊 Response Format (Both Providers)
+
+```javascript
+{
+  text: "american 2100 and 75 turn right on to delta...",
+  confidence: 0.96,
+  words: [
+    { word: "american", confidence: 0.98, start: 0.0, end: 0.5 },
+    { word: "2100", confidence: 0.95, start: 0.5, end: 1.0 }
+    // ...
+  ],
+  duration: 8.8,
+  metadata: {
+    provider: "huggingface",
+    endpoint: "https://...",
+    raw: { /* original response */ }
+  }
+}
+```
+
+---
+
+## 📁 Files Created
+
+| File | Purpose |
+|------|---------|
+| `backend/services/transcription/HuggingFaceProvider.js` | HuggingFace implementation |
+| `scripts/test-huggingface-stt.js` | Test HF provider |
+| `scripts/compare-stt-providers.js` | Compare providers |
+| `scripts/switch-stt-provider.js` | Check provider status |
+| `docs/HUGGINGFACE_SETUP.md` | Setup guide |
+| `docs/STT_PROVIDERS.md` | Provider documentation |
+| `docs/STT_ARCHITECTURE.md` | Architecture diagram |
+
+---
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "HuggingFace API key is required" | Add `HUGGINGFACE_API_KEY` to `.env` |
+| "No STT provider configured" | Add at least one API key to `.env` |
+| "Unexpected response format" | Check your HF model's output format |
+| Provider not switching | Check `.env` is loaded, restart dev server |
+
+---
+
+## ✅ What's Different
+
+- ✅ **No code changes** needed to switch providers
+- ✅ **Same interface** for all providers  
+- ✅ **Easy testing** with comparison tools
+- ✅ **Keep Deepgram** working as before
+- ✅ **Future-proof** for adding more providers
+
+---
+
+## 📚 Full Documentation
+
+- 📖 [Setup Guide](docs/HUGGINGFACE_SETUP.md)
+- 📖 [Provider Guide](docs/STT_PROVIDERS.md)
+- 📖 [Architecture](docs/STT_ARCHITECTURE.md)
+- 📖 [Integration Summary](HUGGINGFACE_INTEGRATION.md)
+
+---
+
+**Ready to test!** 🚀
+
+```bash
+# 1. Check current status
+node scripts/switch-stt-provider.js status
+
+# 2. Add your HF credentials to .env
+# HUGGINGFACE_API_KEY=hf_YOUR_TOKEN_HERE
+
+# 3. Test it
+node scripts/test-huggingface-stt.js your-audio.flac
+```

@@ -537,6 +537,28 @@ function SegmentDetails({
     return '#f8d7da'; // Low - red
   }
 
+  // Download audio with proper filename
+  async function handleDownloadAudio() {
+    try {
+      const response = await fetch(audioUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // Create a better filename: airport_facility_timestamp.mp3
+      const timestamp = new Date(segment.recorded_at).toISOString().slice(0, 19).replace(/:/g, '-');
+      const filename = `${segment.airport}_${segment.facility}_${timestamp}.mp3`;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download audio file');
+    }
+  }
+
   return (
     <div className={styles.details}>
       <div className={styles.detailsHeader}>
@@ -691,6 +713,39 @@ function SegmentDetails({
                 <source src={audioUrl} type="audio/mpeg" />
                 Your browser does not support audio playback.
               </audio>
+
+              {/* Download button with proper styling */}
+              <div style={{
+                marginTop: '8px',
+                display: 'flex',
+                gap: '12px',
+                alignItems: 'center'
+              }}>
+                <button
+                  onClick={handleDownloadAudio}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#2563eb',
+                    backgroundColor: 'white',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.backgroundColor = '#eff6ff';
+                    e.target.style.borderColor = '#2563eb';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.backgroundColor = 'white';
+                    e.target.style.borderColor = '#d1d5db';
+                  }}
+                >
+                  ⬇ Download
+                </button>
+              </div>
 
               {/* Playback Speed Controls */}
               <div style={{

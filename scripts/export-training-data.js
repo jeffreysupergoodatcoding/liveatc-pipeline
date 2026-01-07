@@ -133,7 +133,7 @@ async function exportTrainingData() {
       )
     `)
         .gt('split_into_chunks', 0)
-        .order('updated_at', { ascending: true });
+        .order('created_at', { ascending: true });
 
     if (splitError) {
         console.error('❌ Error fetching split segments:', splitError);

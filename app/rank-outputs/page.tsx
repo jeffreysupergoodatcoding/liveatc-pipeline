@@ -236,7 +236,6 @@ export default function RankOutputsPage() {
     const [segmentData, setSegmentData] = useState<SegmentData | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [stats, setStats] = useState<Stats>({ rankedToday: 0, totalRanked: 0, avgMinutes: 0 });
 
     const [scores, setScores] = useState<{ output1: ScoreSet; output2: ScoreSet; output3: ScoreSet }>({
         output1: { accuracy: 0, completeness: 0, clarity: 0 },
@@ -334,22 +333,10 @@ export default function RankOutputsPage() {
         }
     };
 
-    // Load stats
-    const loadStats = async () => {
-        try {
-            const response = await fetch('/api/rank-outputs/stats');
-            const result = await response.json();
-            if (result.success) {
-                setStats(result.data);
-            }
-        } catch (error) {
-            console.error('Error loading stats:', error);
-        }
-    };
+
 
     useEffect(() => {
         loadNextSegment();
-        loadStats();
     }, []);
 
     // Auto-save to localStorage
@@ -471,7 +458,6 @@ export default function RankOutputsPage() {
             if (result.success) {
                 toast.success('Rankings saved successfully! 🎉');
                 localStorage.removeItem(`ranking-${segmentData.modelOutputId}`);
-                loadStats();
             } else {
                 toast.error(result.error || 'Failed to save rankings');
             }
@@ -520,22 +506,6 @@ export default function RankOutputsPage() {
                             ← Back to Admin
                         </a>
                         <h1 style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif' }}>Variant Test</h1>
-                    </div>
-                </div>
-
-                {/* Stats */}
-                <div className={styles.statsGrid}>
-                    <div className={styles.statCard}>
-                        <div className={styles.statValue}>{stats.rankedToday}</div>
-                        <div className={styles.statLabel}>Ranked Today</div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statValue}>{stats.totalRanked}</div>
-                        <div className={styles.statLabel}>Total Ranked</div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statValue}>{stats.avgMinutes}</div>
-                        <div className={styles.statLabel}>Avg Minutes</div>
                     </div>
                 </div>
 
