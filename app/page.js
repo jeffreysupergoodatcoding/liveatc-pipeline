@@ -5,7 +5,7 @@ export default function Home() {
     <main style={{ padding: '2rem' }}>
       <h1>LiveATC Pipeline</h1>
       <p style={{ marginTop: '1rem', marginBottom: '2rem' }}>
-        Audio collection and segmentation system for LiveATC streams
+        End-to-end data curation platform for ATC audio machine learning
       </p>
 
       <nav>

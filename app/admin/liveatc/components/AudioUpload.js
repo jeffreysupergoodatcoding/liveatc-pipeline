@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import styles from './AudioUpload.module.css';
 
 export default function AudioUpload() {
@@ -9,6 +9,7 @@ export default function AudioUpload() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
 
   function handleDragOver(e) {
     e.preventDefault();
@@ -59,47 +60,28 @@ export default function AudioUpload() {
     setResult(null);
 
     try {
-      // Step 1: Upload file to Supabase Storage
-      const timestamp = Date.now();
-      const fileName = `upload_${timestamp}_${file.name}`;
-      const filePath = `uploads/${fileName}`;
+      // Step 1: Upload file via server-side API (bypasses RLS)
+      const formData = new FormData();
+      formData.append('file', file);
 
-      // Create a Supabase client (we'll need to import this)
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      );
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
 
-      // Upload to storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('liveatc-segments')
-        .upload(filePath, file);
+      const uploadData = await uploadResponse.json();
 
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
+      if (!uploadResponse.ok) {
+        throw new Error(uploadData.error || 'Upload failed');
       }
 
-      // Step 2: Create a segment record
-      const { data: segment, error: segmentError } = await supabase
-        .from('segments')
-        .insert({
-          file_path: filePath,
-          duration_seconds: 0, // Will be updated after processing
-          active: false
-        })
-        .select()
-        .single();
+      const segmentId = uploadData.segmentId;
 
-      if (segmentError) {
-        throw new Error(`Failed to create segment: ${segmentError.message}`);
-      }
-
-      // Step 3: Process with confidence pipeline
+      // Step 2: Process with confidence pipeline
       const response = await fetch('/api/process-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ segmentId: segment.id })
+        body: JSON.stringify({ segmentId })
       });
 
       const data = await response.json();
@@ -113,10 +95,10 @@ export default function AudioUpload() {
             speaker_count: 1
           },
           audioAnalysis: {
-            duration: segment.duration_seconds || 0
+            duration: data.duration || 0
           },
           routing: data.status === 'high_confidence' ? 'rlhf' : 'review',
-          segmentId: segment.id
+          segmentId: segmentId
         };
         setResult(transformedResult);
       } else {
@@ -150,7 +132,7 @@ export default function AudioUpload() {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => document.getElementById('fileInput').click()}
+          onClick={() => fileInputRef.current?.click()}
         >
           <div className={styles.dropzoneContent}>
             <h4>Drag & Drop Audio File</h4>
@@ -158,7 +140,7 @@ export default function AudioUpload() {
             <span className={styles.supportedFormats}>Supports MP3, WAV, M4A, FLAC</span>
           </div>
           <input
-            id="fileInput"
+            ref={fileInputRef}
             type="file"
             accept="audio/*,.mp3,.wav,.m4a,.flac"
             onChange={handleFileInput}
@@ -268,7 +250,7 @@ function AnalysisResult({ result, onReset }) {
               </span>
             </div>
             {result.audioAnalysis.volume && (
-              <>
+              <React.Fragment>
                 <div className={styles.stat}>
                   <span className={styles.statLabel}>Mean Volume</span>
                   <span className={styles.statValue}>
@@ -281,7 +263,7 @@ function AnalysisResult({ result, onReset }) {
                     {result.audioAnalysis.volume.max_volume?.toFixed(1)} dB
                   </span>
                 </div>
-              </>
+              </React.Fragment>
             )}
             {result.audioAnalysis.speechDensity !== undefined && (
               <div className={styles.stat}>
