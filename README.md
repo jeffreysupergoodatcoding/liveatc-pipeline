@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## 🎯 Overview
+## Overview
 
 This pipeline enables you to:
 
@@ -19,14 +19,14 @@ This pipeline enables you to:
 
 | Feature | Description |
 |---------|-------------|
-| 🎙️ **Live Recording** | Record from any available LiveATC feed via web UI |
-| ✂️ **Auto Segmentation** | Silence-based detection splits audio into transmissions |
-| 🔊 **Audio Processing** | Normalization, airband filter, data augmentation |
-| 🏷️ **Labeling Interface** | Review, edit, and approve transcriptions |
-| 📦 **Dataset Export** | Export with 1x-16x augmentation for ML training |
-| 🤖 **RLHF Support** | Generate transcription variants for preference learning |
+| **Live Recording** | Record from any available LiveATC feed via web UI |
+| **Auto Segmentation** | Silence-based detection splits audio into transmissions |
+| **Audio Processing** | Normalization, airband filter, data augmentation |
+| **Labeling Interface** | Review, edit, and approve transcriptions |
+| **Dataset Export** | Export with 1x-16x augmentation for ML training |
+| **RLHF Support** | Generate transcription variants for preference learning |
 
-## 📋 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -56,7 +56,7 @@ npm run dev
 
 Open [http://localhost:3000/admin/liveatc](http://localhost:3000/admin/liveatc) to access the admin interface.
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -80,7 +80,7 @@ Open [http://localhost:3000/admin/liveatc](http://localhost:3000/admin/liveatc) 
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 liveatc-pipeline/
@@ -102,7 +102,7 @@ liveatc-pipeline/
 └── training_data/           # Exported training data
 ```
 
-## 🎛️ Available Airports & Feeds
+## Available Airports & Feeds
 
 | Airport | Code | Feeds |
 |---------|------|-------|
@@ -114,7 +114,7 @@ liveatc-pipeline/
 | Newark | KEWR | Tower, Ground, Approach, Departure |
 | LaGuardia | KLGA | Tower, Ground, Approach, Departure |
 
-## 🔧 Core Workflows
+## Core Workflows
 
 ### 1. Recording Audio
 
@@ -141,12 +141,12 @@ node scripts/liveatc-recorder.js --feed ksfo_twr --duration 300
 1. Go to "Labeled Clips" tab
 2. Click "Export Dataset"
 3. Configure options:
-   - ✅ Audio Normalization (EBU R128)
-   - ✅ Airband Radio Filter (300-3000Hz)
-   - 📊 Dataset Multiplier (1x-16x augmentation)
+   -  Audio Normalization (EBU R128)
+   -  Airband Radio Filter (300-3000Hz)
+   -  Dataset Multiplier (1x-16x augmentation)
 4. Download ZIP file with audio + metadata.jsonl
 
-## 📊 Dataset Export Features
+## Dataset Export Features
 
 | Option | Description |
 |--------|-------------|
@@ -157,7 +157,7 @@ node scripts/liveatc-recorder.js --feed ksfo_twr --duration 300
 | **Volume** | ±6dB variations |
 | **Noise Injection** | 1-8% white noise overlay |
 
-## 🧪 Development
+## Development
 
 ```bash
 # Start development server
@@ -170,7 +170,7 @@ node scripts/segment-audio.js --input recordings/raw/example.mp3
 node scripts/check-pipeline-status.js
 ```
 
-## 📚 Documentation
+## Documentation
 
 | Document | Description |
 |----------|-------------|
@@ -179,11 +179,11 @@ node scripts/check-pipeline-status.js
 | [RLHF Pipeline](docs/RLHF_PIPELINE.md) | Preference learning setup |
 | [API Reference](docs/API_REFERENCE.md) | Endpoint documentation |
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read the contributing guidelines before submitting a PR.
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
