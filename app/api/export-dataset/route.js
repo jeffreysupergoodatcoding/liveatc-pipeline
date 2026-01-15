@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '../../../lib/supabase-server.js';
 import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
+import { promises as fs, createWriteStream } from 'fs';
 import path from 'path';
 import os from 'os';
 import { logger } from '../../../lib/logger.js';
+import archiver from 'archiver';
 
 /**
  * Audio processing utilities for dataset export
@@ -511,16 +512,25 @@ export async function POST(request) {
         const summaryPath = path.join(tempDir, 'summary.json');
         await fs.writeFile(summaryPath, JSON.stringify(summary, null, 2));
 
-        // Create ZIP file
+        // Create ZIP file using archiver (cross-platform, no external dependencies)
         const zipPath = path.join(os.tmpdir(), `atc_training_dataset_${Date.now()}.zip`);
 
         await new Promise((resolve, reject) => {
-            const zip = spawn('zip', ['-r', zipPath, '.'], { cwd: tempDir });
-            zip.on('close', code => {
-                if (code === 0) resolve();
-                else reject(new Error(`zip exited with code ${code}`));
+            const output = createWriteStream(zipPath);
+            const archive = archiver('zip', { zlib: { level: 6 } });
+
+            output.on('close', () => {
+                logger.info(`ZIP archive created: ${archive.pointer()} bytes`);
+                resolve();
             });
-            zip.on('error', reject);
+
+            archive.on('error', (err) => {
+                reject(err);
+            });
+
+            archive.pipe(output);
+            archive.directory(tempDir, false);
+            archive.finalize();
         });
 
         // Read zip file
