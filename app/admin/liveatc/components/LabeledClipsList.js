@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabase';
 import { formatDuration, formatFileSize, formatQualityScore } from '../../../../lib/utils/format';
 import AudioTrimmer from './AudioTrimmer';
+import ExportDatasetModal from './ExportDatasetModal';
 import styles from './LabeledClipsList.module.css';
 
 // Helper functions for status display
@@ -40,6 +41,7 @@ export default function LabeledClipsList() {
   const [segmentLabels, setSegmentLabels] = useState([]);
   const [airportFilter, setAirportFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     fetchLabeledSegments();
@@ -113,9 +115,18 @@ export default function LabeledClipsList() {
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <h2>Labeled Clips</h2>
-          <button onClick={fetchLabeledSegments} className={styles.refreshButton}>
-            ↻ Refresh
-          </button>
+          <div className={styles.headerButtons}>
+            <button onClick={fetchLabeledSegments} className={styles.refreshButton}>
+              ↻ Refresh
+            </button>
+            <button
+              onClick={() => setShowExportModal(true)}
+              className={styles.exportButton}
+              disabled={segments.length === 0}
+            >
+              Export Dataset
+            </button>
+          </div>
         </div>
         <div className={styles.meta}>
           <span>{filteredSegments.length} labeled clips</span>
@@ -256,6 +267,12 @@ export default function LabeledClipsList() {
           )}
         </div>
       )}
+
+      {/* Export Dataset Modal */}
+      <ExportDatasetModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+      />
     </div>
   );
 }

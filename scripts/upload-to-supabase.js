@@ -104,7 +104,7 @@ async function uploadToStorage(supabase, bucket, filePath, storagePath) {
     .from(bucket)
     .upload(storagePath, fileBuffer, {
       contentType: 'audio/mpeg',
-      upsert: false
+      upsert: true
     });
 
   if (error) {
