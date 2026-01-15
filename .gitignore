@@ -1,13 +1,53 @@
+# Dependencies
 node_modules/
+
+# Next.js build
 .next/
+out/
+
+# Environment variables (keep .env.example)
 .env
 .env.local
-recordings/
-*.log
-dist/
-build/
-.DS_Store
-tsconfig.tsbuildinfo
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Claude Code settings (may contain credentials)
-.claude/settings.local.json
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Local recordings (keep folder structure)
+recordings/raw/*.mp3
+recordings/segments/*/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Training data (generated locally)
+training_data/audio/
+training_data/*.jsonl
+training_data_for_colab.zip
+
+# Claude config (local AI assistant)
+.claude/
+
+# Misc
+liveatc-pipeline

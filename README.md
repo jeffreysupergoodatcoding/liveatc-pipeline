@@ -1,452 +1,192 @@
-# LiveATC Pipeline
+# LiveATC Training Pipeline
 
-A complete system to collect, segment, and store LiveATC audio recordings with an admin interface for reviewing and managing segments.
+> A complete system for collecting, processing, and preparing ATC (Air Traffic Control) audio for machine learning model training.
 
-## Architecture
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Backend Pipeline (Node.js):**
-1. Recording: Download LiveATC streams periodically using ffmpeg
-2. Segmentation: Split recordings into individual transmissions based on silence detection
-3. Storage: Upload to Supabase Storage + save metadata to PostgreSQL database
+## 🎯 Overview
 
-**Frontend Admin Interface (Next.js/React):**
-- View all recordings and segments
-- Play/review segments with inline audio player
-- Mark segments as good/bad quality
-- See storage usage and statistics
-- Bulk operations on segments
+This pipeline enables you to:
 
-## Prerequisites
+- **Record** live ATC audio streams from 7 major airports (24+ feeds)
+- **Segment** recordings into individual transmissions automatically
+- **Transcribe** segments using Deepgram with confidence scoring
+- **Label** data with a human-in-the-loop review interface  
+- **Export** training datasets with audio augmentation for ML models
+- **Fine-tune** speech-to-text models (Whisper) with the collected data
 
-- Node.js 18+ and npm
-- ffmpeg installed and available in PATH
-  - macOS: `brew install ffmpeg`
-  - Ubuntu: `apt-get install ffmpeg`
-  - Windows: Download from ffmpeg.org
-- Supabase account (free tier is fine)
+### Key Features
 
-## Setup
+| Feature | Description |
+|---------|-------------|
+| 🎙️ **Live Recording** | Record from any available LiveATC feed via web UI |
+| ✂️ **Auto Segmentation** | Silence-based detection splits audio into transmissions |
+| 🔊 **Audio Processing** | Normalization, airband filter, data augmentation |
+| 🏷️ **Labeling Interface** | Review, edit, and approve transcriptions |
+| 📦 **Dataset Export** | Export with 1x-16x augmentation for ML training |
+| 🤖 **RLHF Support** | Generate transcription variants for preference learning |
 
-### 1. Install Dependencies
+## 📋 Quick Start
+
+### Prerequisites
+
+- **Node.js** 18+ and npm
+- **ffmpeg** installed (`brew install ffmpeg` on macOS)
+- **Supabase** account (free tier works)
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/your-username/liveatc-pipeline.git
+cd liveatc-pipeline
+
+# Install dependencies
 npm install
-```
 
-### 2. Set Up Supabase
-
-#### Create a New Project
-1. Go to [supabase.com](https://supabase.com) and create a new project
-2. Wait for the project to be provisioned
-
-#### Run Database Migration
-1. Go to SQL Editor in Supabase Dashboard
-2. Copy the contents of `supabase/migrations/001_initial_schema.sql`
-3. Run the SQL to create tables and triggers
-
-#### Set Up Storage Buckets
-1. Go to Storage in Supabase Dashboard
-2. Create two buckets:
-   - `liveatc-raw` (Private)
-   - `liveatc-segments` (Public)
-3. For policies, refer to `supabase/setup-storage.md`
-
-### 3. Configure Environment Variables
-
-```bash
+# Copy environment template
 cp .env.example .env
-```
+# Edit .env with your Supabase credentials
 
-Edit `.env` with your Supabase credentials:
+# Run database migrations (see docs/DATABASE_SETUP.md)
 
-```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-anon-key
-SUPABASE_SERVICE_KEY=your-service-role-key
-
-LIVEATC_FEEDS='[
-  {"airport": "KJFK", "facility": "ground", "url": "http://d.liveatc.net/kjfk_gnd"},
-  {"airport": "KSFO", "facility": "ground", "url": "http://d.liveatc.net/ksfo_gnd"},
-  {"airport": "KIAH", "facility": "tower", "url": "http://d.liveatc.net/kiah1_1"}
-]'
-
-RECORDING_DURATION=60
-RECORDING_SCHEDULE="0 * * * *"
-```
-
-**Important:** 
-- Start with `RECORDING_DURATION=60` (1 minute) for testing!
-- See `FEEDS.md` for a complete list of all 31 available feeds across 7 airports
-
-## Testing the Pipeline
-
-### Test 1: Record Audio (1 minute test)
-
-```bash
-# Test with JFK Ground
-node scripts/liveatc-recorder.js --feed kjfk_gnd --duration 60
-
-# Or test with San Francisco Ground
-node scripts/liveatc-recorder.js --feed ksfo_gnd --duration 60
-
-# Or test with Houston Bush Tower
-node scripts/liveatc-recorder.js --feed kiah_twr --duration 60
-```
-
-This will:
-- Record 1 minute of audio from the selected feed
-- Save to `recordings/raw/[airport]_[facility]_YYYYMMDD_HHMMSS.mp3`
-- Output metadata as JSON
-
-**Expected output:**
-```
-Starting recording...
-  Airport: KJFK
-  Facility: ground
-  Duration: 60s
-  Progress: 100% (60/60s)
-Recording completed successfully!
-```
-
-### Test 2: Segment Audio
-
-```bash
-node scripts/segment-audio.js --input recordings/raw/kjfk_gnd_20250118_143000.mp3
-```
-
-This will:
-- Detect silence periods in the recording
-- Split into individual transmission segments
-- Calculate quality scores for each segment
-- Save segments to `recordings/segments/kjfk_gnd_20250118_143000/`
-
-**Expected output:**
-```
-Detecting silence periods...
-  Found 15 silence periods
-Calculating segment boundaries...
-  Created 12 segments
-Extracting segments...
-  Extracting segment 12/12...
-
-Segmentation complete!
-  Total segments: 12
-  Total duration: 45.30s
-  Average quality: 0.67
-```
-
-### Test 3: Upload to Supabase
-
-```bash
-node scripts/upload-to-supabase.js \
-  --raw-file recordings/raw/kjfk_gnd_20250118_143000.mp3 \
-  --segment-dir recordings/segments/kjfk_gnd_20250118_143000
-```
-
-This will:
-- Upload raw recording to Supabase Storage
-- Upload all segments to Supabase Storage
-- Insert metadata into database
-
-**Expected output:**
-```
-=== Uploading Recording ===
-  Uploading kjfk_gnd_20250118_143000.mp3 (7.50 MB)...
-Recording ID: abc-123-def
-
-=== Uploading Segments ===
-  Uploading segment 12/12...
-  Uploaded 12/12 segments
-
-=== Upload Complete ===
-```
-
-### Test 4: End-to-End Pipeline
-
-Run the complete pipeline (record → segment → upload) for KJFK Ground:
-
-```bash
-node scripts/scheduled-pipeline.js --feed kjfk --once
-```
-
-Or run for all configured feeds:
-
-```bash
-node scripts/scheduled-pipeline.js --once
-```
-
-**Expected output:**
-```
-============================================================
-Processing feed: KJFK ground
-============================================================
-
-STEP 1: Recording...
-[... recording output ...]
-
-STEP 2: Segmenting...
-[... segmentation output ...]
-
-STEP 3: Uploading to Supabase...
-[... upload output ...]
-
-============================================================
-PIPELINE COMPLETE
-Total time: 125.43s
-============================================================
-```
-
-### Test 5: Admin Interface
-
-Start the Next.js development server:
-
-```bash
+# Start the development server
 npm run dev
 ```
 
-Open [http://localhost:3000/admin/liveatc](http://localhost:3000/admin/liveatc)
+Open [http://localhost:3000/admin/liveatc](http://localhost:3000/admin/liveatc) to access the admin interface.
 
-**Features to test:**
-- View recordings list
-- Filter by airport/facility/status
-- Click "View Segments" on a recording
-- Play segments using the inline player
-- Mark segments as good/bad
-- Use bulk actions to mark/delete multiple segments
-- View statistics dashboard
+## 🏗️ Architecture
 
-## Running on a Schedule
-
-To run the pipeline automatically every hour:
-
-```bash
-node scripts/scheduled-pipeline.js --schedule
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Admin Interface                          │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────────┐ │
+│  │ Record   │ │ Segment  │ │ Labeled  │ │ Export Dataset       │ │
+│  │ Audio    │ │ Analysis │ │ Clips    │ │ (Augmentation)       │ │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────────┬───────────┘ │
+└───────┼────────────┼────────────┼───────────────────┼────────────┘
+        │            │            │                   │
+        ▼            ▼            ▼                   ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                        API Routes (/api)                          │
+│  /record  │  /segments  │  /segment-labels  │  /export-dataset   │
+└───────────────────────────────────────────────────────────────────┘
+        │            │            │                   │
+        ▼            ▼            ▼                   ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                     Supabase (PostgreSQL + Storage)               │
+│   recordings │ segments │ segment_labels │ liveatc-segments       │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-This will:
-- Run every hour (configurable via `RECORDING_SCHEDULE` in `.env`)
-- Process all feeds in `LIVEATC_FEEDS`
-- Stagger recordings by 30 seconds to avoid overload
-- Log results to `logs/pipeline_TIMESTAMP.json`
-
-**Using PM2 for production:**
-
-```bash
-npm install -g pm2
-pm2 start scripts/scheduled-pipeline.js --name liveatc-pipeline -- --schedule
-pm2 save
-pm2 startup
-```
-
-## Project Structure
+## 📂 Project Structure
 
 ```
 liveatc-pipeline/
-├── scripts/
-│   ├── liveatc-recorder.js       # Audio recording script
-│   ├── segment-audio.js          # Segmentation script
-│   ├── upload-to-supabase.js     # Upload script
-│   └── scheduled-pipeline.js     # Orchestration script
-├── app/
-│   ├── admin/liveatc/            # Admin interface
-│   │   ├── page.js               # Main admin page
-│   │   └── components/           # React components
-│   └── globals.css               # Global styles
-├── lib/
-│   ├── supabase.js               # Supabase client
-│   └── utils/format.js           # Formatting utilities
-├── supabase/
-│   ├── migrations/               # Database migrations
-│   └── setup-storage.md          # Storage setup guide
-├── recordings/
-│   ├── raw/                      # Raw recordings
-│   └── segments/                 # Segmented audio
-├── logs/                         # Pipeline logs
-├── .env                          # Environment variables
-├── package.json                  # Dependencies
-└── README.md                     # This file
+├── app/                      # Next.js application
+│   ├── admin/liveatc/       # Admin interface components
+│   │   └── components/      # React components
+│   └── api/                 # API routes
+│       ├── record/          # Recording API
+│       ├── export-dataset/  # Export with augmentation
+│       └── segments/        # Segment management
+├── scripts/                  # CLI tools and automation
+│   ├── liveatc-recorder.js  # Record from LiveATC streams
+│   ├── segment-audio.js     # Split audio by silence
+│   ├── upload-to-supabase.js# Upload to database
+│   └── scheduled-pipeline.js# Automated processing
+├── lib/                      # Shared utilities
+├── docs/                     # Documentation
+├── supabase/                 # Database migrations
+└── training_data/           # Exported training data
 ```
 
-## Script Reference
+## 🎛️ Available Airports & Feeds
 
-### liveatc-recorder.js
+| Airport | Code | Feeds |
+|---------|------|-------|
+| New York JFK | KJFK | Tower, Ground, Tower2 |
+| San Francisco | KSFO | Tower, Ground, Combined, Departure |
+| Houston Bush | KIAH | Tower, Approach, Ground N/S/W |
+| Houston Hobby | KHOU | Combined |
+| Austin | KAUS | Tower, Ground, Approach/Departure |
+| Newark | KEWR | Tower, Ground, Approach, Departure |
+| LaGuardia | KLGA | Tower, Ground, Approach, Departure |
 
-Records audio from LiveATC streams.
+## 🔧 Core Workflows
 
-**Usage:**
+### 1. Recording Audio
+
+**Via Web UI:**
+1. Go to Recordings tab
+2. Select an airport feed
+3. Choose duration (1 min - 1 hour)
+4. Click "Start Recording"
+
+**Via CLI:**
 ```bash
-# Using predefined feed
-node scripts/liveatc-recorder.js --feed kjfk_gnd --duration 600
-
-# Record from San Francisco Tower
-node scripts/liveatc-recorder.js --feed ksfo_twr --duration 600
-
-# Record from Newark Approach
-node scripts/liveatc-recorder.js --feed kewr_app_final --duration 600
-
-# Custom feed
-node scripts/liveatc-recorder.js \
-  --airport KJFK \
-  --facility ground \
-  --url http://d.liveatc.net/kjfk_gnd \
-  --duration 600
+node scripts/liveatc-recorder.js --feed ksfo_twr --duration 300
 ```
 
-**Options:**
-- `--feed`: Predefined feed name (see `FEEDS.md` for all 31 available feeds)
-- `--airport`: Airport code (e.g., KJFK, KSFO, KIAH, KAUS, KEWR, KLGA, KHOU)
-- `--facility`: Facility type (ground, tower, approach, departure, etc.)
-- `--url`: LiveATC stream URL
-- `--duration`: Recording duration in seconds (default: 600)
+### 2. Reviewing Segments
 
-**Available Airports:**
-- KJFK (JFK) - 3 feeds
-- KHOU (Houston Hobby) - 1 feed
-- KIAH (Houston Bush) - 5 feeds
-- KSFO (San Francisco) - 4 feeds
-- KAUS (Austin) - 3 feeds
-- KEWR (Newark) - 4 feeds
-- KLGA (LaGuardia) - 4 feeds
+1. Go to "Segment Analysis" tab
+2. Play audio segments
+3. Review AI transcription
+4. Edit and approve as needed
 
-See `FEEDS.md` for complete details on all available feeds.
+### 3. Exporting Training Data
 
-### segment-audio.js
+1. Go to "Labeled Clips" tab
+2. Click "Export Dataset"
+3. Configure options:
+   - ✅ Audio Normalization (EBU R128)
+   - ✅ Airband Radio Filter (300-3000Hz)
+   - 📊 Dataset Multiplier (1x-16x augmentation)
+4. Download ZIP file with audio + metadata.jsonl
 
-Segments audio files based on silence detection.
+## 📊 Dataset Export Features
 
-**Usage:**
-```bash
-node scripts/segment-audio.js --input path/to/recording.mp3
-```
+| Option | Description |
+|--------|-------------|
+| **Normalization** | EBU R128 loudness normalization (-16 LUFS) |
+| **Airband Filter** | Bandpass 300-3000Hz + compression |
+| **Time Stretch** | Speed variations (0.85x - 1.15x) |
+| **Pitch Shift** | ±4 semitones variations |
+| **Volume** | ±6dB variations |
+| **Noise Injection** | 1-8% white noise overlay |
 
-**Options:**
-- `--input`: Path to input audio file (required)
-- `--silence-threshold`: Silence threshold in dB (default: -40)
-- `--silence-duration`: Minimum silence duration in seconds (default: 0.5)
-- `--min-duration`: Minimum segment duration in seconds (default: 2)
-- `--max-duration`: Maximum segment duration in seconds (default: 20)
-
-### upload-to-supabase.js
-
-Uploads recordings and segments to Supabase.
-
-**Usage:**
-```bash
-# Using file paths
-node scripts/upload-to-supabase.js \
-  --raw-file recordings/raw/kjfk_gnd_20250118_143000.mp3 \
-  --segment-dir recordings/segments/kjfk_gnd_20250118_143000
-
-# Using metadata JSON files
-node scripts/upload-to-supabase.js \
-  --recording-metadata recording.json \
-  --segment-metadata segments.json
-```
-
-### scheduled-pipeline.js
-
-Orchestrates the complete pipeline.
-
-**Usage:**
-```bash
-# Run once for all feeds
-node scripts/scheduled-pipeline.js --once
-
-# Run once for specific feed
-node scripts/scheduled-pipeline.js --feed kjfk
-
-# Run on schedule
-node scripts/scheduled-pipeline.js --schedule
-```
-
-## Configuration
-
-### Audio Processing Settings
-
-Adjust in `.env`:
+## 🧪 Development
 
 ```bash
-# Silence detection
-SILENCE_THRESHOLD=-40        # dB (lower = more sensitive)
-SILENCE_DURATION=0.5         # seconds
+# Start development server
+npm run dev
 
-# Segment filtering
-MIN_SEGMENT_DURATION=2       # seconds (discard shorter)
-MAX_SEGMENT_DURATION=20      # seconds (discard longer)
+# Run specific script
+node scripts/segment-audio.js --input recordings/raw/example.mp3
+
+# Check pipeline status
+node scripts/check-pipeline-status.js
 ```
 
-### Feed Configuration
+## 📚 Documentation
 
-Edit `LIVEATC_FEEDS` in `.env`:
+| Document | Description |
+|----------|-------------|
+| [Database Setup](docs/DATABASE_SETUP.md) | Supabase configuration |
+| [Audio Processing](docs/AUDIO_PROCESSING.md) | Trimming, normalization |
+| [RLHF Pipeline](docs/RLHF_PIPELINE.md) | Preference learning setup |
+| [API Reference](docs/API_REFERENCE.md) | Endpoint documentation |
 
-```bash
-LIVEATC_FEEDS='[
-  {"airport": "KJFK", "facility": "ground", "url": "http://d.liveatc.net/kjfk_gnd"},
-  {"airport": "KJFK", "facility": "tower", "url": "http://d.liveatc.net/kjfk_twr"},
-  {"airport": "KSFO", "facility": "ground", "url": "http://d.liveatc.net/ksfo_gnd"}
-]'
-```
+## 🤝 Contributing
 
-### Schedule Configuration
+Contributions are welcome! Please read the contributing guidelines before submitting a PR.
 
-Cron syntax for `RECORDING_SCHEDULE`:
+## 📄 License
 
-```bash
-"0 * * * *"      # Every hour at :00
-"*/30 * * * *"   # Every 30 minutes
-"0 */2 * * *"    # Every 2 hours
-```
+MIT License - see [LICENSE](LICENSE) for details.
 
-## Troubleshooting
+---
 
-### ffmpeg not found
-```bash
-# macOS
-brew install ffmpeg
-
-# Ubuntu/Debian
-sudo apt-get install ffmpeg
-
-# Verify installation
-ffmpeg -version
-```
-
-### No segments created
-- Check if the audio file has actual content (not just silence)
-- Lower the `SILENCE_THRESHOLD` (e.g., -50 instead of -40)
-- Check minimum/maximum duration constraints
-
-### Upload fails
-- Verify Supabase credentials in `.env`
-- Check that storage buckets exist
-- Ensure storage policies are set correctly
-- Use `SUPABASE_SERVICE_KEY` for backend operations
-
-### Admin interface shows no data
-- Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env`
-- Check browser console for errors
-- Ensure database tables exist (run migration)
-
-## Performance Tips
-
-1. **Storage**: Use 128kbps MP3 encoding (default) for good quality at reasonable file sizes
-2. **Segmentation**: Adjust silence parameters based on your needs:
-   - Noisier feeds: Use lower threshold (e.g., -50dB)
-   - Cleaner feeds: Use higher threshold (e.g., -35dB)
-3. **Scheduling**: Stagger multiple feeds by 30+ seconds to avoid concurrent recordings
-4. **Cleanup**: Regularly archive or delete old recordings from Supabase Storage
-
-## Next Steps
-
-1. Add authentication to admin interface
-2. Implement transcription using Whisper API
-3. Add export functionality (CSV, JSON)
-4. Create labeling interface for training data
-5. Implement search and filtering on transcriptions
-6. Add real-time monitoring dashboard
-7. Set up automated quality checks
-8. Implement automatic cleanup of low-quality segments
-
-## License
-
-MIT
+**Built for ATC speech-to-text model training** 🎧✈️
