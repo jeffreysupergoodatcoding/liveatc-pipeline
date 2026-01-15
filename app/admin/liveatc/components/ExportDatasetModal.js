@@ -165,7 +165,7 @@ export default function ExportDatasetModal({ isOpen, onClose }) {
                                 />
                                 <span className={styles.checkmark}></span>
                                 <div className={styles.optionText}>
-                                    <strong>Airband Radio Bypass Filter</strong>
+                                    <strong>Airband Radio Bandpass Filter</strong>
                                     <span>Apply 300-3000Hz bandpass + compression</span>
                                 </div>
                             </label>

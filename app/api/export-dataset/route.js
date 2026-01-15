@@ -80,7 +80,7 @@ async function normalizeAudio(inputPath, outputPath) {
 }
 
 /**
- * Airband Radio Bypass Filter
+ * Airband Radio Bandpass Filter
  * Simulates the audio characteristics of airband radio:
  * - Bandpass filter (300Hz - 3000Hz typical for aviation radio)
  * - Slight compression
