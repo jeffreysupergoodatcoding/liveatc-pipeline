@@ -26,6 +26,11 @@ This pipeline enables you to:
 | **Dataset Export** | Export with 1x-16x augmentation for ML training |
 | **RLHF Support** | Generate transcription variants for preference learning |
 
+## Model
+This pipeline was used to collect and curate a dataset that was used to fine tune a STT model for airband radio transcription. While the dataset was very small, the results were positive. Given a larger dataset and more compute, the pipeline can be used to train SOTA AI models. 
+
+Model link: https://huggingface.co/jeffreysuu/whisper-atc-finetuned
+
 ## Quick Start
 
 ### Prerequisites
