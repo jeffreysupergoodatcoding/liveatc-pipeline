@@ -48,9 +48,9 @@ specialized vocabulary, and a near-total absence of American English training
 corpora in the published literature.
 The state-of-the-art open ATC ASR model---WhisperATC by van Doorn et
 al.~\cite{vandoorn2024whisperatc}, fine-tuned on European ATCO2 and ATCOSIM
-corpora---achieves 3.88\% word error rate (WER) on European ATC data but
-degrades to 30.3\% on American ATC transmissions, exposing a systematic accent
-and phraseology mismatch.
+corpora---achieves 3.88\% word error rate (WER) on ATCOSIM (speaker-split
+evaluation) but degrades to 30.3\% on American ATC transmissions, exposing a
+systematic accent and phraseology mismatch.
 We present a data-efficient fine-tuning pipeline that adapts \textit{Whisper
 Large v3}~\cite{radford2023whisper} to American English ATC using only 55
 manually transcribed clips recorded from three major US airports (KIAH, KJFK,
@@ -80,8 +80,10 @@ civil aviation. Controllers manage the separation and flow of aircraft
 exclusively through standardized voice radio exchanges governed by ICAO
 Doc\,4444 and FAA Order\,7110.65, where a single transcription error or
 phraseology misinterpretation can contribute to catastrophic outcomes---as
-evidenced by the 2008 Spanair MD-82 accident and the 2023 Watsonville
-mid-air collision.
+evidenced by the 1977 Tenerife runway collision, in which radio
+miscommunication between controllers and crew contributed to the deadliest
+accident in aviation history, and the 2023 Watsonville mid-air collision,
+in which inadequate radio situational awareness was a contributing factor.
 
 Despite this criticality, ATC-specific ASR research has lagged behind
 general-domain speech recognition, and the available training corpora exhibit
@@ -90,8 +92,9 @@ ATCOSIM simulation dataset~\cite{zuluagagomez2022atcosim}---the two dominant
 public resources---consist exclusively of European controller speech. Van Doorn
 et al.~\cite{vandoorn2024whisperatc} recently achieved state-of-the-art
 performance on these benchmarks by fine-tuning Whisper Large\,v3 on the
-combined ATCO2 and ATCOSIM corpora, reporting 3.88\% WER on European data and
-releasing the first high-accuracy open models for ATC speech recognition.
+combined ATCO2 and ATCOSIM corpora, reporting 3.88\% WER on ATCOSIM
+(speaker-split) and 13.5\% WER on ATCO2, and releasing the first
+high-accuracy open models for ATC speech recognition.
 However, when applied without modification to American English ATC
 transmissions, their model (\texttt{jlvdoorn/atco2-asr-atcosim}) yields
 30.3\% WER---a 26-percentage-point degradation attributable to compound
@@ -141,8 +144,9 @@ scenarios.
 
 The most directly related work is van Doorn et
 al.~\cite{vandoorn2024whisperatc}, who fine-tuned Whisper Large\,v3 on the
-combined ATCO2 and ATCOSIM corpora, achieving 3.88\% WER on European ATC
-and releasing the first high-accuracy open models for this domain. Their work
+combined ATCO2 and ATCOSIM corpora, achieving 3.88\% WER on ATCOSIM
+(speaker-split) and 13.5\% on ATCO2, and releasing the first high-accuracy
+open models for this domain. Their work
 establishes both the current state of the art and the baseline for our
 evaluation: applied zero-shot to American ATC audio, the
 \texttt{jlvdoorn/atco2-asr-atcosim} model yields 30.3\% WER. To our
@@ -199,8 +203,15 @@ those within a 2--20 second duration window. Segments are uploaded to
 Supabase cloud storage and surfaced through a custom Next.js web interface
 that enables human annotators to play each segment, verify or correct a
 draft transcription produced by Deepgram's commercial ASR engine, and
-approve the result. After review, 55 high-quality clips were accepted as
-ground-truth training data. The pipeline is summarized in
+approve the result. Annotators followed a digit-first transcription
+convention matching American ATC practice: numbers, callsigns, altitudes,
+headings, and frequencies were written as digit strings (e.g., \texttt{425},
+\texttt{135.7}, \texttt{240}) rather than verbalized form (e.g.,
+\textit{four two five}, \textit{one three five point seven}). This convention
+directly defines the target output format the fine-tuned model learns and
+accounts for the numeric notation differences observed in
+Section~\ref{sec:experiments}. After review, 55 high-quality clips were
+accepted as ground-truth training data. The pipeline is summarized in
 Figure~\ref{fig:pipeline}.
 
 \begin{figure}[h]
@@ -293,11 +304,11 @@ Training duration           & $\approx$25 minutes \\
 \end{tabular}
 \end{table}
 
-The learning rate of $5 \times 10^{-6}$---approximately one order of magnitude
-below typical Whisper fine-tuning recommendations---was chosen to minimise
+The learning rate of $5 \times 10^{-6}$---approximately half of typical Whisper
+fine-tuning recommendations ($1 \times 10^{-5}$)---was chosen to minimise
 catastrophic forgetting of the model's general speech priors while permitting
 specialization to American ATC conventions. Weight decay ($\lambda = 0.01$)
-and per-epoch early-stopping on validation loss serve as additional
+and per-epoch evaluation of validation loss serve as additional
 regularizers against the limited data regime.
 
 \subsection{LoRA Incompatibility with Whisper's Encoder}
@@ -527,8 +538,8 @@ and sensor models:
         turbulence zones, precipitation, runway visual range, and ceiling.
   \item \textbf{Aircraft performance}: Type-specific speed envelopes,
         climb and descent performance tables, turn radii, and wake turbulence
-        categories (A--D under ICAO classification).
-  \item \textbf{Communication}: Tower, ground, approach, departure, and CTAF
+        categories (Light, Medium, Heavy, Super under ICAO classification).
+  \item \textbf{Communication}: Tower, ground, approach, and departure
         frequency management; ATIS broadcast state; radio-failure protocols.
   \item \textbf{Airspace}: Sector boundaries, published procedures (SIDs,
         STARs, approaches), temporary flight restrictions, and NOTAMs.
@@ -571,7 +582,7 @@ into AI-assisted ATC operations.
 % ─── Acknowledgements ───────────────────────────────────────────────────────
 \section*{Acknowledgements}
 
-The author thanks the operators of LiveATC.net for providing public access to
+The authors thank the operators of LiveATC.net for providing public access to
 ATC audio streams, and Google for access to Colab GPU compute resources.
 
 % ─── References ─────────────────────────────────────────────────────────────
