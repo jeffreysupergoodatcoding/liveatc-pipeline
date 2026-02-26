@@ -41,10 +41,11 @@ recordings/segments/*/
 .DS_Store
 Thumbs.db
 
-# Training data (generated locally)
+# Training data scratch exports (generated locally, not the canonical dataset/)
 training_data/audio/
 training_data/*.jsonl
 training_data_for_colab.zip
+# dataset/ is intentionally tracked in git
 
 # Claude config (local AI assistant)
 .claude/

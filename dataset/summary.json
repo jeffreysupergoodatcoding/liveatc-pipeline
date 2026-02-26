@@ -1,0 +1,22 @@
+{
+  "export_date": "2026-01-15T17:29:25.663Z",
+  "total_samples": 275,
+  "original_samples": 55,
+  "augmented_samples": 220,
+  "options": {
+    "normalize": true,
+    "airbandFilter": true,
+    "augmentation": true,
+    "augmentationMultiplier": 4,
+    "airbandOptions": {
+      "lowFreq": 300,
+      "highFreq": 3000,
+      "compression": true,
+      "noiseLevel": 0
+    }
+  },
+  "statistics": {
+    "total_duration_seconds": 1462.757367555556,
+    "average_duration_seconds": 5.319117700202021
+  }
+}

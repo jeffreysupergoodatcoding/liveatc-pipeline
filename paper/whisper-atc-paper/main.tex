@@ -1,0 +1,592 @@
+\documentclass[11pt,a4paper]{article}
+
+% ─── Packages ───────────────────────────────────────────────────────────────
+\usepackage[top=1in,bottom=1in,left=0.9in,right=0.9in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{authblk}
+\usepackage{cite}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{caption}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!70!black,
+  citecolor=blue!70!black,
+  urlcolor=blue!70!black,
+}
+
+% ─── Title ──────────────────────────────────────────────────────────────────
+\title{\textbf{Fine-Tuning Whisper for American English\\
+Air Traffic Control Speech Recognition:\\
+A Data-Efficient Pipeline}}
+
+\author[1]{Jeffrey Su}
+\author[2]{Omar Haq}
+\affil[1]{Undergraduate Student, Rice University\\ \small\texttt{js318@rice.edu}}
+\affil[2]{Undergraduate Student, University of Michigan\\ \small\texttt{omarhaq@umich.edu}}
+\affil[ ]{\small\url{https://github.com/jeffreysupergoodatcoding/liveatc-pipeline}\ $\cdot$\
+\url{https://huggingface.co/jeffreysuu/whisper-atc-finetuned}}
+\date{February 2026}
+
+% ────────────────────────────────────────────────────────────────────────────
+\begin{document}
+\maketitle
+
+% ─── Abstract ───────────────────────────────────────────────────────────────
+\begin{abstract}
+Automatic speech recognition (ASR) for air traffic control (ATC) presents
+a persistent domain adaptation challenge: VHF radio channel degradation,
+specialized vocabulary, and a near-total absence of American English training
+corpora in the published literature.
+The state-of-the-art open ATC ASR model---WhisperATC by van Doorn et
+al.~\cite{vandoorn2024whisperatc}, fine-tuned on European ATCO2 and ATCOSIM
+corpora---achieves 3.88\% word error rate (WER) on ATCOSIM (speaker-split
+evaluation) but degrades to 30.3\% on American ATC transmissions, exposing a
+systematic accent and phraseology mismatch.
+We present a data-efficient fine-tuning pipeline that adapts \textit{Whisper
+Large v3}~\cite{radford2023whisper} to American English ATC using only 55
+manually transcribed clips recorded from three major US airports (KIAH, KJFK,
+KSFO) via LiveATC.net.
+Domain-matched audio preprocessing---a 300--3400\,Hz Butterworth bandpass
+filter with EBU\,R128 loudness normalization---combined with five-fold
+stochastic data augmentation addresses the limited corpus size.
+Full fine-tuning with conservative hyperparameters achieves \textbf{13.7\%
+WER}, a \textbf{54.8\% relative reduction} from the European-trained baseline,
+using 370$\times$ fewer training clips than the most comparable prior study.
+A secondary contribution is the characterization of a structural incompatibility
+between the HuggingFace PEFT LoRA implementation and Whisper's log-mel
+spectrogram encoder that prevents parameter-efficient fine-tuning without
+modification of library internals.
+All code, the fine-tuned model, and training notebooks are publicly available.
+\end{abstract}
+
+\noindent\textbf{Keywords:} air traffic control, automatic speech recognition,
+Whisper, fine-tuning, data augmentation, American English, domain adaptation,
+LoRA
+
+% ─── 1. Introduction ────────────────────────────────────────────────────────
+\section{Introduction}
+
+Air traffic control is among the most safety-critical communication domains in
+civil aviation. Controllers manage the separation and flow of aircraft
+exclusively through standardized voice radio exchanges governed by ICAO
+Doc\,4444 and FAA Order\,7110.65, where a single transcription error or
+phraseology misinterpretation can contribute to catastrophic outcomes---as
+evidenced by the 1977 Tenerife runway collision, in which radio
+miscommunication between controllers and crew contributed to the deadliest
+accident in aviation history, and the 2023 Watsonville mid-air collision,
+in which inadequate radio situational awareness was a contributing factor.
+
+Despite this criticality, ATC-specific ASR research has lagged behind
+general-domain speech recognition, and the available training corpora exhibit
+a pronounced geographic bias. The ATCO2 corpus~\cite{kocour2021atco2} and the
+ATCOSIM simulation dataset~\cite{zuluagagomez2022atcosim}---the two dominant
+public resources---consist exclusively of European controller speech. Van Doorn
+et al.~\cite{vandoorn2024whisperatc} recently achieved state-of-the-art
+performance on these benchmarks by fine-tuning Whisper Large\,v3 on the
+combined ATCO2 and ATCOSIM corpora, reporting 3.88\% WER on ATCOSIM
+(speaker-split) and 13.5\% WER on ATCO2, and releasing the first
+high-accuracy open models for ATC speech recognition.
+However, when applied without modification to American English ATC
+transmissions, their model (\texttt{jlvdoorn/atco2-asr-atcosim}) yields
+30.3\% WER---a 26-percentage-point degradation attributable to compound
+mismatches in accent, number verbalization conventions (e.g., ``one five zero''
+vs.\ ``150''), and procedural phraseology between European and American ATC
+practice.
+
+American English ATC is therefore systematically underserved by the current
+research landscape. The FAA projects a deficit of over 3,000 certified
+professional controllers by 2032~\cite{faashortage2023}, and accurate
+low-latency ASR is a prerequisite for any AI system designed to augment human
+controllers, automate transmission logging, or surface real-time safety alerts.
+
+This paper makes the following contributions:
+\begin{enumerate}[noitemsep]
+  \item A complete end-to-end pipeline for collecting, annotating, augmenting,
+        and fine-tuning on American ATC audio sourced from LiveATC.net
+        (Section~\ref{sec:method}).
+  \item A 54.8\% relative WER reduction on American ATC transmissions from 55
+        manually labeled clips, demonstrating that targeted fine-tuning with
+        domain-matched preprocessing substantially closes the
+        European--American accent and convention gap
+        (Section~\ref{sec:experiments}).
+  \item A documented structural incompatibility between the HuggingFace PEFT
+        LoRA implementation and Whisper's audio encoder that constitutes a
+        practical obstacle for the broader speech adaptation community
+        (Section~\ref{sec:lora}).
+\end{enumerate}
+
+% ─── 2. Related Work ────────────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\subsection{ATC Automatic Speech Recognition}
+
+Early ATC ASR systems employed HMM-based hybrids augmented with task-specific
+pronunciation grammars~\cite{cordero2012atcasr}. The ATCO2
+project~\cite{kocour2021atco2} produced a large corpus of European ATC audio
+and trained end-to-end models achieving sub-20\% WER on European data,
+establishing the benchmark used by most subsequent work.
+Pellegrini et al.~\cite{pellegrini2021atc} demonstrated that pre-trained
+speech encoders (wav2vec\,2.0) fine-tuned on small ATC corpora achieve
+competitive WER, directly motivating the transfer-learning approach pursued
+here. Zuluaga-Gomez et al.~\cite{zuluagagomez2022atcosim} released ATCosim,
+a simulation-based corpus that complements ATCO2 with synthetic air traffic
+scenarios.
+
+The most directly related work is van Doorn et
+al.~\cite{vandoorn2024whisperatc}, who fine-tuned Whisper Large\,v3 on the
+combined ATCO2 and ATCOSIM corpora, achieving 3.88\% WER on ATCOSIM
+(speaker-split) and 13.5\% on ATCO2, and releasing the first high-accuracy
+open models for this domain. Their work
+establishes both the current state of the art and the baseline for our
+evaluation: applied zero-shot to American ATC audio, the
+\texttt{jlvdoorn/atco2-asr-atcosim} model yields 30.3\% WER. To our
+knowledge, no published work has performed controlled fine-tuning specifically
+targeting American English ATC.
+
+\subsection{Whisper and Domain Adaptation}
+
+OpenAI's Whisper~\cite{radford2023whisper} is a sequence-to-sequence
+encoder-decoder model trained on 680,000 hours of weakly supervised web audio.
+Its multitask, multilingual design makes it a strong candidate for domain
+adaptation. Gandhe et al.~\cite{gandhe2023whisperadapt} showed that fine-tuning
+Whisper on as few as 100 hours of in-domain speech can halve WER, while van
+Doorn et al.~\cite{vandoorn2024whisperatc} established that even smaller
+corpora yield strong results when the target domain is acoustically coherent
+and domain-matched preprocessing is applied. Replicating the spectral
+characteristics of the target recording environment is a consistent theme
+across successful ASR domain adaptations~\cite{park2019specaugment}.
+
+\subsection{Parameter-Efficient Fine-Tuning}
+
+Low-Rank Adaptation (LoRA)~\cite{hu2021lora} reduces the number of trainable
+parameters by inserting low-rank decomposition matrices into transformer
+weight matrices, enabling fine-tuning of billion-parameter models on constrained
+hardware. It has been applied to language
+models~\cite{dettmers2023qlora} and certain speech
+encoders~\cite{kim2023loraspeech}. Section~\ref{sec:lora} documents why LoRA
+cannot be straightforwardly applied to Whisper's encoder using the current
+HuggingFace PEFT implementation.
+
+% ─── 3. Methodology ─────────────────────────────────────────────────────────
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Data Collection}
+
+Audio was recorded from LiveATC.net, a public streaming service that
+rebroadcasts live VHF radio transmissions from airports worldwide.
+Three high-traffic American facilities were selected to maximize phonetic
+and procedural diversity:
+\begin{itemize}[noitemsep]
+  \item \textbf{KIAH} --- Houston George Bush Intercontinental (Tower,
+        Approach, Ground)
+  \item \textbf{KJFK} --- New York John F.\ Kennedy International (Tower,
+        Ground)
+  \item \textbf{KSFO} --- San Francisco International (Tower, Ground,
+        Departure)
+\end{itemize}
+
+A Node.js pipeline records continuous streams in 10-minute chunks and
+applies silence-based segmentation (500\,ms silence threshold,
+$-40$\,dB gate) to produce individual transmission segments, retaining
+those within a 2--20 second duration window. Segments are uploaded to
+Supabase cloud storage and surfaced through a custom Next.js web interface
+that enables human annotators to play each segment, verify or correct a
+draft transcription produced by Deepgram's commercial ASR engine, and
+approve the result. Annotators followed a digit-first transcription
+convention matching American ATC practice: numbers, callsigns, altitudes,
+headings, and frequencies were written as digit strings (e.g., \texttt{425},
+\texttt{135.7}, \texttt{240}) rather than verbalized form (e.g.,
+\textit{four two five}, \textit{one three five point seven}). This convention
+directly defines the target output format the fine-tuned model learns and
+accounts for the numeric notation differences observed in
+Section~\ref{sec:experiments}. After review, 55 high-quality clips were
+accepted as ground-truth training data. The pipeline is summarized in
+Figure~\ref{fig:pipeline}.
+
+\begin{figure}[h]
+\centering
+\small
+\begin{verbatim}
+LiveATC.net  ->  Record (10-min chunks)
+              ->  Silence-based segmentation (500 ms / -40 dB)
+              ->  Upload to Supabase
+              ->  Human annotation (Next.js web UI)
+              ->  Export: audio + metadata.jsonl
+              ->  Preprocessing & augmentation
+              ->  Fine-tuning (HuggingFace Seq2SeqTrainer)
+\end{verbatim}
+\caption{End-to-end data pipeline from raw radio stream to fine-tuned model.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Audio Preprocessing}
+\label{sec:preprocess}
+
+ATC transmissions are spectrally shaped by VHF radio hardware, concentrating
+the energy of speech in the 300--3400\,Hz telephony band. To replicate this
+characteristic during training and suppress broadband recording artifacts
+not present in real operational audio, each clip is processed through a
+6th-order Butterworth bandpass filter with cutoffs at 300\,Hz and 3400\,Hz.
+Following filtering, loudness normalization to $-16$\,LUFS (EBU\,R128
+standard) ensures uniform energy levels across clips recorded at varying
+gain settings, preventing the model from learning spurious level-dependent
+cues.
+
+\subsection{Data Augmentation}
+\label{sec:augmentation}
+
+With only 55 base clips (approximately 15 minutes of labeled audio),
+overfitting is the primary training risk. We synthesize four augmented
+variants per clip, yielding an effective training set of 275 samples, via
+the stochastic transforms listed in Table~\ref{tab:augmentation}.
+
+\begin{table}[h]
+\centering
+\caption{Data augmentation transforms and parameter ranges.}
+\label{tab:augmentation}
+\begin{tabular}{ll}
+\toprule
+\textbf{Transform} & \textbf{Parameter Range} \\
+\midrule
+Time stretch         & Speed factor $\in [0.85,\,1.15]$ \\
+Pitch shift          & $\pm 4$ semitones \\
+Gain variation       & $\pm 6$\,dB \\
+White noise injection & 1--8\% amplitude ratio \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Crucially, the 300--3400\,Hz bandpass filter is re-applied \emph{after} each
+augmentation step. This ensures that all training variants---regardless of
+time stretch, pitch shift, or noise level---exhibit the same radio spectral
+envelope, preventing the model from associating augmentation artifacts with
+the target domain.
+
+\subsection{Model and Training Configuration}
+\label{sec:training}
+
+We fine-tune \texttt{openai/whisper-large-v3}~\cite{radford2023whisper}, a
+1.55\,B-parameter encoder-decoder transformer, using the HuggingFace
+\texttt{Seq2SeqTrainer} on a single NVIDIA Tesla T4 GPU (15\,GB VRAM) in
+Google Colab. Training hyperparameters are reported in
+Table~\ref{tab:hyperparams}.
+
+\begin{table}[h]
+\centering
+\caption{Training hyperparameters.}
+\label{tab:hyperparams}
+\begin{tabular}{ll}
+\toprule
+\textbf{Hyperparameter} & \textbf{Value} \\
+\midrule
+Base model                  & \texttt{openai/whisper-large-v3} \\
+Learning rate               & $5 \times 10^{-6}$ \\
+Training epochs             & 5 \\
+Per-device batch size       & 4 \\
+Gradient accumulation steps & 4 (effective batch: 16) \\
+Warmup steps                & 50 \\
+Weight decay                & 0.01 \\
+Numerical precision         & FP16 \\
+Evaluation strategy         & Per epoch \\
+Training duration           & $\approx$25 minutes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The learning rate of $5 \times 10^{-6}$---approximately half of typical Whisper
+fine-tuning recommendations ($1 \times 10^{-5}$)---was chosen to minimise
+catastrophic forgetting of the model's general speech priors while permitting
+specialization to American ATC conventions. Weight decay ($\lambda = 0.01$)
+and per-epoch evaluation of validation loss serve as additional
+regularizers against the limited data regime.
+
+\subsection{LoRA Incompatibility with Whisper's Encoder}
+\label{sec:lora}
+
+Low-Rank Adaptation was initially pursued as a parameter-efficient alternative
+to full fine-tuning that would reduce trainable parameters from 1.55\,B to
+approximately 5--50\,M, lowering both memory requirements and overfitting
+risk. We attempted LoRA via the HuggingFace PEFT library~\cite{peft2023} but
+encountered a structural incompatibility: \texttt{get\_peft\_model} injects
+adapters assuming the primary input key is \texttt{input\_ids}, which is the
+standard token embedding path for language models. Whisper's encoder, however,
+receives \texttt{input\_features}---a 128-channel log-mel spectrogram tensor
+of shape $(B, 128, 3000)$. This mismatch produces a shape error at the first
+forward pass that cannot be resolved without modifying PEFT library internals
+or forking the encoder.
+
+At the time of this work, no stable PEFT integration existed for
+encoder-decoder speech models with Whisper's feature-extractor
+front-end~\cite{kim2023loraspeech}. We therefore proceeded with full
+fine-tuning, accepting the higher memory footprint and compensating with
+the augmentation and conservative hyperparameters described above. This
+incompatibility is documented here as it is likely to affect researchers
+pursuing parameter-efficient adaptation of Whisper or architecturally
+similar audio encoder-decoder models.
+
+% ─── 4. Experiments ─────────────────────────────────────────────────────────
+\section{Experiments and Results}
+\label{sec:experiments}
+
+\subsection{Evaluation Protocol}
+
+WER is computed using the \texttt{jiwer} library~\cite{jiwer2023} with
+standard text normalization (lowercasing, punctuation removal). The held-out
+evaluation set comprises 15\% of the 55 annotated clips (approximately 8
+segments) withheld from training and augmentation. The baseline system is the
+\texttt{jlvdoorn/atco2-asr-atcosim} model from van Doorn et
+al.~\cite{vandoorn2024whisperatc}, applied zero-shot to the same evaluation
+clips.
+
+\subsection{Main Results}
+
+\begin{table}[h]
+\centering
+\caption{WER on held-out American English ATC clips.}
+\label{tab:mainresults}
+\begin{tabular}{lcc}
+\toprule
+\textbf{System} & \textbf{WER (\%)} & \textbf{Rel.\ Reduction} \\
+\midrule
+WhisperATC~\cite{vandoorn2024whisperatc} (zero-shot on American ATC) & 30.3 & --- \\
+\textbf{Ours (Whisper Large v3, full fine-tune)}  & \textbf{13.7} & \textbf{54.8\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The fine-tuned model achieves a 16.6 percentage-point absolute improvement
+over the European-trained baseline (Table~\ref{tab:mainresults}), reducing
+WER from 30.3\% to 13.7\% on American ATC audio. This result is notable
+given the extreme data constraint: roughly 15 minutes of labeled audio,
+compared to the thousands of hours typically used in large-scale ASR
+fine-tuning.
+
+\subsection{Qualitative Analysis}
+
+Table~\ref{tab:qualitative} contrasts baseline and fine-tuned transcriptions
+on three representative held-out segments, illustrating systematic improvements
+in American-convention formatting.
+
+\begin{table}[h]
+\centering
+\caption{Qualitative transcription comparison on held-out American ATC segments.}
+\label{tab:qualitative}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+& \textbf{Transcription} \\
+\midrule
+\textbf{Reference}  & United 425 cleared for takeoff runway 28 left wind 240 at 12 \\
+\textbf{Baseline}   & United four two five clear for take off runway twenty-eight left wind two forty at twelve \\
+\textbf{Fine-tuned} & United 425 cleared for takeoff runway 28 left wind 240 at 12 \\
+\midrule
+\textbf{Reference}  & Delta 832 descend and maintain flight level 240 speed 280 knots \\
+\textbf{Baseline}   & Delta eight thirty two descend maintain flight level two forty speed two eighty knots \\
+\textbf{Fine-tuned} & Delta 832 descend and maintain flight level 240 speed 280 knots \\
+\midrule
+\textbf{Reference}  & Southwest 1503 contact Houston departure 135.7 good day \\
+\textbf{Baseline}   & Southwest Fifteen Zero Three contact Houston departure one three five point seven good day \\
+\textbf{Fine-tuned} & Southwest 1503 contact Houston departure 135.7 good day \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Three systematic improvements emerge across examples:
+\begin{enumerate}[noitemsep]
+  \item \textbf{Numeric notation}: American ATC renders callsigns, altitudes,
+        headings, and frequencies as digit strings (e.g., ``425'', ``240'',
+        ``135.7'') rather than the verbalized form produced by the
+        European-trained model. This distinction directly affects downstream
+        parsing of ATC instructions.
+  \item \textbf{Phraseology completeness}: The conjunction \textit{and} in
+        climb and descent clearances (\textit{descend and maintain}) is
+        consistently recovered by the fine-tuned model; the baseline omits
+        it, deviating from FAA\,7110.65 prescribed phraseology.
+  \item \textbf{Command-word accuracy}: The fine-tuned model correctly
+        transcribes \textit{cleared for takeoff} rather than the baseline's
+        \textit{clear for take off}, preserving the operative word
+        (\textit{cleared}) that distinguishes a clearance from a conditional.
+\end{enumerate}
+
+\subsection{Data Efficiency in Context}
+
+\begin{table}[h]
+\centering
+\caption{Data efficiency comparison across recent ATC ASR fine-tuning studies.}
+\label{tab:comparison}
+\begin{tabular}{lrrc}
+\toprule
+\textbf{System} & \textbf{Training clips} & \textbf{WER (\%)} & \textbf{Accent region} \\
+\midrule
+van Doorn et al.~\cite{vandoorn2024whisperatc} & $\sim$10,000+ & 3.88 & European \\
+Wee et al.~\cite{wee2023singaporeatc}          & $\sim$20,000  & $\sim$8 & Singaporean \\
+\textbf{Ours}                                  & \textbf{55}   & \textbf{13.7} & \textbf{American} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Our system uses approximately 370$\times$ fewer clips than Wee et
+al.~\cite{wee2023singaporeatc} while targeting a distinct, previously
+underserved accent group (Table~\ref{tab:comparison}). The remaining WER
+gap relative to the European and Singaporean systems reflects two compounding
+factors: the evaluation set is small ($\approx$8 clips), inflating variance,
+and generalization from 55 training examples to the full phonetic and
+procedural diversity of American ATC is necessarily limited. Scaling the
+corpus to 1,000 or more clips would substantially reduce both sources of error.
+
+% ─── 5. Discussion ──────────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Limitations}
+
+The evaluation set of approximately 8 clips introduces high variance in WER
+estimates; results should be interpreted as indicative of the approach's
+viability rather than as definitive performance bounds. Training data
+covers only three airports; generalization to other American facilities
+(e.g., KLAX, KORD, KATL) with distinct regional accents and traffic
+patterns is untested. Full fine-tuning of a 1.55\,B-parameter model on 55
+clips risks catastrophic forgetting of Whisper's multilingual and
+general-domain capabilities; no out-of-domain evaluation was performed.
+The documented LoRA incompatibility (Section~\ref{sec:lora}) means that
+parameter-efficient adaptation---which would partially mitigate this
+risk---requires either an upstream PEFT library update or a custom
+adapter implementation.
+
+\subsection{Future Work}
+
+The most direct extension of this work is to scale the labeled American ATC
+corpus to 1,000 or more clips spanning at least 10 facilities, bringing the
+data scale closer to that of van Doorn et al.~\cite{vandoorn2024whisperatc}
+and enabling statistically reliable WER estimation. The recording
+infrastructure, annotation interface, and augmentation pipeline described in
+Section~\ref{sec:method} are designed to support this scaling without
+architectural changes. Structured transcriptions produced by the ASR layer
+additionally serve as input for downstream natural language understanding,
+extracting callsigns, instruction types, altitudes, and headings as
+preconditions for AI-assisted workload reduction.
+
+\subsubsection{Toward RLHF-Based ATC Reasoning}
+
+A natural extension of the ASR foundation is a decision-support layer trained
+via Reinforcement Learning from Human Feedback
+(RLHF)~\cite{ouyang2022rlhf,christiano2017rlhf}. In this framing, a
+policy model receives a structured world state (derived from ASR output plus
+radar and surveillance feeds) and generates candidate ATC instructions.
+Certified controllers rank candidate instructions on dimensions of safety,
+efficiency, and phraseology compliance; a reward model is fitted on these
+preference pairs and used to fine-tune the policy via Proximal Policy
+Optimization (PPO)~\cite{schulman2017ppo}.
+
+RLHF is particularly well-suited to ATC reasoning because the task is not
+purely deterministic---experienced controllers can legitimately disagree on
+optimal sequencing strategies under complex traffic loads---making human
+preference a meaningful training signal that cannot be captured by a fixed
+rule set alone. A key implementation consideration is that preference
+elicitation should present scenarios in the same structured format produced
+by the NLU layer, shielding controller raters from RL internals.
+
+\subsubsection{Toward RLVR with Formal Safety Constraints}
+
+For safety-critical deployment, verifiable reward signals are preferable to
+learned reward models, which can be miscalibrated or subject to reward
+hacking~\cite{skalse2022reward}. Reinforcement Learning with Verifiable
+Rewards (RLVR)~\cite{lightman2023rlvr,guo2025deepseekr1} trains a policy
+against rewards that are automatically computable from first principles,
+removing the dependence on human raters at every training step. For ATC,
+candidate verifiable reward signals include:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Separation compliance}: Binary or continuous reward based on
+        whether projected trajectories maintain FAA minimum separation
+        (3\,nmi lateral or 1,000\,ft vertical in Class\,B/C airspace).
+  \item \textbf{Conflict probability}: Estimated from physics-based
+        trajectory prediction over a configurable lookahead horizon.
+  \item \textbf{Runway incursion risk}: Derived from a surface movement model
+        incorporating aircraft position, taxi clearances, and hold-short
+        instructions.
+  \item \textbf{Phraseology correctness}: Verified against a formal grammar
+        derived from ICAO Doc\,4444 and FAA Order\,7110.65.
+  \item \textbf{Controller workload proxy}: Estimated from communication
+        density, pending acknowledgements, and instruction completion latency.
+\end{itemize}
+
+\subsubsection{Simulation Environment}
+
+Training and evaluating RLHF and RLVR policies requires a high-fidelity
+simulator that can generate diverse, controllable ATC scenarios at scale.
+BlueSky~\cite{hoekstra2016bluesky}, an open-source Python ATC simulator
+developed at TU Delft, provides an appropriate foundation. A production
+training environment would extend BlueSky with the following state variables
+and sensor models:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Surveillance}: ADS-B transponder data (position, altitude,
+        velocity, intent), primary and secondary radar returns, TCAS resolution
+        advisory states.
+  \item \textbf{Weather}: Wind fields (shear layers, gusts), convective cells,
+        turbulence zones, precipitation, runway visual range, and ceiling.
+  \item \textbf{Aircraft performance}: Type-specific speed envelopes,
+        climb and descent performance tables, turn radii, and wake turbulence
+        categories (Light, Medium, Heavy, Super under ICAO classification).
+  \item \textbf{Communication}: Tower, ground, approach, and departure
+        frequency management; ATIS broadcast state; radio-failure protocols.
+  \item \textbf{Airspace}: Sector boundaries, published procedures (SIDs,
+        STARs, approaches), temporary flight restrictions, and NOTAMs.
+\end{itemize}
+
+This simulation environment would allow RLVR training to proceed without
+human annotation at each step, with the separation compliance and conflict
+probability rewards computed deterministically from the simulator state.
+The principal challenge is ensuring that scenarios sampled during training
+adequately cover edge cases---emergency declarations, pilot deviations,
+equipment failures---where formal specification of ``correct'' controller
+behavior is non-trivial.
+
+% ─── 6. Conclusion ──────────────────────────────────────────────────────────
+\section{Conclusion}
+
+We have demonstrated that Whisper Large\,v3 can be effectively adapted to
+American English ATC communications using only 55 manually transcribed clips,
+achieving 13.7\% WER---a 54.8\% relative improvement over the European-trained
+WhisperATC baseline of van Doorn et al.~\cite{vandoorn2024whisperatc}. The
+principal enabling factors are: (a) domain-matched audio preprocessing
+(300--3400\,Hz bandpass filter re-applied after each augmentation step),
+(b) five-fold stochastic augmentation that expands the effective training set
+from 55 to 275 samples, and (c) conservative full fine-tuning hyperparameters
+that minimize catastrophic forgetting.
+
+A secondary contribution is the characterization of a structural
+incompatibility between the HuggingFace PEFT LoRA implementation and
+Whisper's log-mel spectrogram encoder. This finding is relevant to any
+researcher pursuing adapter-based adaptation of encoder-decoder speech models
+and points to an open engineering gap in the parameter-efficient fine-tuning
+ecosystem.
+
+The results demonstrate that targeted fine-tuning with domain-matched
+preprocessing can substantially close accent-driven performance gaps even in
+severe data-constrained settings, providing a data-efficient path toward
+American English ATC speech recognition and a foundation for further research
+into AI-assisted ATC operations.
+
+% ─── Acknowledgements ───────────────────────────────────────────────────────
+\section*{Acknowledgements}
+
+The authors thank the operators of LiveATC.net for providing public access to
+ATC audio streams, and Google for access to Colab GPU compute resources.
+
+% ─── References ─────────────────────────────────────────────────────────────
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
