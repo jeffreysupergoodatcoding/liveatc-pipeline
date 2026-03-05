@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logger } from '../../../../../lib/logger.js';
 
 /**
  * POST /api/segments/[id]/ai-suggest
- * Get AI-powered transcription suggestion using OpenAI GPT-4
+ * Get AI-powered transcription suggestion using Google Gemini Flash
  */
 export async function POST(request, { params }) {
     try {
@@ -22,22 +22,25 @@ export async function POST(request, { params }) {
             userMessage
         } = body;
 
-        // Check for OpenAI API key
-        if (!process.env.OPENAI_API_KEY) {
+        // Check for Google API key
+        if (!process.env.GOOGLE_API_KEY) {
             return NextResponse.json(
-                { error: 'OpenAI API key not configured' },
+                { error: 'Google API key not configured' },
                 { status: 500 }
             );
         }
 
-        const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 500,
+            }
         });
 
         // Build system message with aviation context
-        const systemMessage = {
-            role: 'system',
-            content: `You are an expert in aviation radio communications and ATC (Air Traffic Control) operations. You are helping review and correct automatic transcriptions of ATC radio transmissions.
+        const systemPrompt = `You are an expert in aviation radio communications and ATC (Air Traffic Control) operations. You are helping review and correct automatic transcriptions of ATC radio transmissions.
 
 Context for this segment:
 - Airport: ${airport}
@@ -54,34 +57,31 @@ Your expertise includes:
 5. Phonetic alphabet and number pronunciation
 
 When asked for transcription corrections, provide ONLY the corrected text. If parts are unclear, use [UNKNOWN].
-For other questions, provide helpful, concise answers based on aviation knowledge and the segment context.`
-        };
+For other questions, provide helpful, concise answers based on aviation knowledge and the segment context.`;
 
         logger.info('AI chat request for segment:', id);
 
-        // Build messages array
-        const messages = [systemMessage];
+        // Convert chat history format if needed
+        const history = chatHistory ? chatHistory.map(msg => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+        })) : [];
 
-        // Add chat history if exists
-        if (chatHistory && chatHistory.length > 0) {
-            messages.push(...chatHistory);
-        }
-
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: messages,
-            temperature: 0.3,
-            max_tokens: 500
+        const chat = model.startChat({
+            history: history,
+            systemInstruction: systemPrompt
         });
 
-        const suggestion = completion.choices[0].message.content.trim();
+        const result = await chat.sendMessage(userMessage || "Provide the corrected transcription based on the automatic text.");
+        const response = await result.response;
+        const suggestion = response.text().trim();
 
         logger.info('AI response generated');
 
         return NextResponse.json({
             suggestion,
-            model: 'gpt-4o',
-            confidence: completion.choices[0].finish_reason === 'stop' ? 'high' : 'medium'
+            model: 'gemini-1.5-flash',
+            confidence: 'high'
         });
 
     } catch (error) {

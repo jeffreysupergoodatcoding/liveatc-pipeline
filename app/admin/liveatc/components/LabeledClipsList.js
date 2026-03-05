@@ -117,7 +117,7 @@ export default function LabeledClipsList() {
           <h2>Labeled Clips</h2>
           <div className={styles.headerButtons}>
             <button onClick={fetchLabeledSegments} className={styles.refreshButton}>
-              ↻ Refresh
+              Refresh
             </button>
             <button
               onClick={() => setShowExportModal(true)}
@@ -496,36 +496,26 @@ function SegmentDetails({ segment, labels, onClose, onRefreshLabels, onSegmentUp
           {/* Edit Trim Button */}
           <button
             onClick={() => setShowTrimEditor(!showTrimEditor)}
-            style={{
-              marginTop: '12px',
-              padding: '8px 16px',
-              fontSize: '14px',
-              backgroundColor: showTrimEditor ? '#dc3545' : '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}
+            className={showTrimEditor ? styles.cancelButton : styles.trimButton}
           >
-            {showTrimEditor ? '✕ Cancel Trim Edit' : 'Edit Audio Trim'}
+            {showTrimEditor ? 'Cancel Trim' : 'Edit Audio Trim'}
           </button>
         </section>
 
         {/* Audio Trimmer (when editing) */}
         {showTrimEditor && (
-          <section style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-            <h5 style={{ marginBottom: '12px' }}>Edit Audio Trim</h5>
+          <section className={styles.trimEditorSection}>
+            <h5>Edit Audio Trim</h5>
             {!originalAudioUrl ? (
-              <div style={{ padding: '16px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '6px' }}>
-                <p style={{ margin: 0, color: '#856404' }}>
-                  ⚠️ Unable to load original audio file. Please close and reopen this segment to try again.
+              <div className={styles.alertWarning}>
+                <p>
+                  Unable to load original audio file. Please close and reopen this segment to try again.
                 </p>
               </div>
             ) : (
               <>
-                <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
-                  Mark regions to remove from the <strong>original</strong> audio. The trimmer shows the full original clip.
+                <p className={styles.helperText}>
+                  Mark regions to remove from the <strong>original</strong> audio.
                 </p>
                 <AudioTrimmer
                   audioUrl={originalAudioUrl}
@@ -534,7 +524,7 @@ function SegmentDetails({ segment, labels, onClose, onRefreshLabels, onSegmentUp
                   onTrimSave={handleTrimSave}
                 />
                 {trimSaving && (
-                  <p style={{ marginTop: '12px', color: '#0070f3', fontWeight: '500' }}>Saving trim...</p>
+                  <p className={styles.loadingText}>Saving trim...</p>
                 )}
               </>
             )}
@@ -574,15 +564,7 @@ function SegmentDetails({ segment, labels, onClose, onRefreshLabels, onSegmentUp
                       {editingLabelId !== label.id && (
                         <button
                           onClick={() => startEditing(label)}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            backgroundColor: '#0070f3',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
+                          className={styles.editButton}
                         >
                           Edit
                         </button>
@@ -610,54 +592,27 @@ function SegmentDetails({ segment, labels, onClose, onRefreshLabels, onSegmentUp
                           }}
                         />
                       </div>
-                      <div className={styles.labelContext} style={{ marginTop: '12px' }}>
+                      <div className={styles.labelContext}>
                         <strong>Context (Optional):</strong>
                         <textarea
                           value={editedContext}
                           onChange={(e) => setEditedContext(e.target.value)}
                           placeholder="Add context notes..."
-                          style={{
-                            width: '100%',
-                            minHeight: '60px',
-                            padding: '8px',
-                            marginTop: '8px',
-                            fontSize: '14px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontFamily: 'inherit',
-                            backgroundColor: '#fff3cd'
-                          }}
+                          className={styles.editContextArea}
                         />
                       </div>
-                      <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                      <div className={styles.editActions}>
                         <button
                           onClick={() => saveLabel(label.id)}
                           disabled={saving}
-                          style={{
-                            padding: '8px 16px',
-                            fontSize: '14px',
-                            backgroundColor: saving ? '#ccc' : '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: saving ? 'not-allowed' : 'pointer',
-                            fontWeight: '600'
-                          }}
+                          className={styles.saveButton}
                         >
                           {saving ? 'Saving...' : 'Save Changes'}
                         </button>
                         <button
                           onClick={cancelEditing}
                           disabled={saving}
-                          style={{
-                            padding: '8px 16px',
-                            fontSize: '14px',
-                            backgroundColor: '#6c757d',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: saving ? 'not-allowed' : 'pointer'
-                          }}
+                          className={styles.cancelLink}
                         >
                           Cancel
                         </button>

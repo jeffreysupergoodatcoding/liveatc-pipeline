@@ -1,332 +1,186 @@
 .container {
-    background-color: white;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    margin-bottom: 24px;
-    overflow: hidden;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    margin-bottom: 48px;
 }
 
 .header {
-    padding: 20px 24px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
-    color: white;
+    padding: 32px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: white;
 }
 
 .header h3 {
-    margin: 0 0 6px 0;
-    font-size: 18px;
+    font-size: 1.5rem;
     font-weight: 600;
 }
 
 .description {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.85;
-}
-
-.loading {
-    padding: 40px;
-    text-align: center;
-    color: #6b7280;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
 }
 
 /* Active Recordings */
 .activeRecordings {
-    padding: 20px 24px;
-    background: #fef3c7;
-    border-bottom: 1px solid #fcd34d;
-}
-
-.activeRecordings h4 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #92400e;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: #fff9db;
+    /* Soft minimalist warning yellow */
 }
 
 .activeRecording {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
-    background: white;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.activeRecording:last-child {
-    margin-bottom: 0;
-}
-
-.recordingInfo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
+    gap: 24px;
+    padding: 16px 0;
 }
 
 .recordingIndicator {
-    width: 12px;
-    height: 12px;
-    background: #ef4444;
-    border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.4;
-    }
-}
-
-.recordingInfo strong {
-    font-size: 14px;
-    color: #1f2937;
-}
-
-.recordingMeta {
-    display: block;
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 2px;
+    width: 8px;
+    height: 8px;
+    background: var(--accent-red);
 }
 
 .progressContainer {
     flex: 1;
-    max-width: 200px;
-    height: 6px;
-    background: #e5e7eb;
-    border-radius: 3px;
-    overflow: hidden;
+    height: 1px;
+    background: var(--border-strong);
 }
 
 .progressBar {
     height: 100%;
-    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-    transition: width 0.3s ease;
+    background: var(--text-primary);
 }
 
 .stopButton {
-    padding: 6px 16px;
-    background: #dc2626;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
+    padding: 6px 12px;
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
-}
-
-.stopButton:hover {
-    background: #b91c1c;
 }
 
 /* Form Section */
 .formSection {
-    padding: 24px;
+    padding: 32px;
+    background: white;
 }
 
 .formGroup {
-    margin-bottom: 20px;
+    margin-bottom: 32px;
 }
 
 .formGroup label {
     display: block;
-    font-size: 14px;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: #374151;
-    margin-bottom: 8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
 }
 
 .select {
     width: 100%;
-    padding: 12px 16px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
+    padding: 12px;
+    border: 1px solid var(--border-strong);
     background: white;
-    cursor: pointer;
-}
-
-.select:focus {
-    outline: none;
-    border-color: #0070f3;
-    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
-}
-
-.select optgroup {
-    font-weight: 600;
-    color: #1f2937;
-}
-
-.select option {
-    font-weight: normal;
-    padding: 8px;
+    font-size: 0.9rem;
 }
 
 /* Duration Buttons */
 .durationButtons {
     display: flex;
-    gap: 8px;
+    gap: 12px;
+    margin-bottom: 24px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
 }
 
 .durationButton {
     padding: 10px 20px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-strong);
     background: white;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
+    font-size: 0.85rem;
     cursor: pointer;
-    transition: all 0.2s;
-}
-
-.durationButton:hover {
-    border-color: #0070f3;
-    color: #0070f3;
 }
 
 .durationButton.active {
-    background: #0070f3;
-    border-color: #0070f3;
+    background: var(--text-primary);
     color: white;
 }
 
 .customDuration {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: #6b7280;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
 }
 
 .durationInput {
-    width: 100px;
     padding: 8px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
+    border: 1px solid var(--border-strong);
+    width: 100px;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
     text-align: center;
 }
 
-.durationInput:focus {
-    outline: none;
-    border-color: #0070f3;
-}
-
-/* Error */
-.error {
-    padding: 12px 16px;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-radius: 8px;
-    color: #dc2626;
-    font-size: 14px;
-    margin-bottom: 16px;
-}
-
-/* Start Button */
 .startButton {
     width: 100%;
-    padding: 14px 24px;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    padding: 20px;
+    background: var(--text-primary);
     color: white;
     border: none;
-    border-radius: 10px;
-    font-size: 16px;
     font-weight: 600;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-}
-
-.startButton:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    margin-top: 24px;
 }
 
 .startButton:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
 }
 
 /* Airports Summary */
 .airportsSummary {
-    padding: 20px 24px;
-    background: #f9fafb;
-    border-top: 1px solid #e5e7eb;
+    padding: 32px;
+    background: var(--bg-tertiary);
+    border-top: 1px solid var(--border-subtle);
 }
 
 .airportsSummary h4 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #374151;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
 }
 
 .airportGrid {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
 }
 
 .airportCard {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
+    padding: 12px 20px;
     background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .airportCode {
     font-weight: 700;
-    color: #0070f3;
-    font-size: 14px;
+    color: var(--text-primary);
 }
 
 .feedCount {
-    font-size: 12px;
-    color: #6b7280;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-    .activeRecording {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-
-    .progressContainer {
-        width: 100%;
-        max-width: none;
-    }
-
-    .durationButtons {
-        justify-content: flex-start;
-    }
-
-    .durationButton {
-        flex: 1;
-        min-width: 80px;
-    }
+    font-size: 0.7rem;
+    color: var(--text-muted);
 }

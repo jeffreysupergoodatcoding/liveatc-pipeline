@@ -214,7 +214,7 @@ function AnalysisResult({ result, onReset }) {
               {confidence >= 0.85 ? 'HIGH CONFIDENCE' : confidence >= 0.70 ? 'MEDIUM' : 'LOW CONFIDENCE'}
             </div>
             <div className={routing === 'rlhf' ? styles.rlhfBadge : styles.reviewBadge}>
-              {routing === 'rlhf' ? '→ RLHF Pipeline' : '→ Human Review'}
+              {routing === 'rlhf' ? 'Pipeline: RLHF' : 'Pipeline: Review'}
             </div>
           </div>
         </div>

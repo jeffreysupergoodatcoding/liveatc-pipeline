@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "inputPath": "/Users/jeffreysu/Desktop/atc project/liveatc-pipeline-2/recordings/raw/kjfk_gnd_20260305_120001.mp3",
+  "outputDir": "/Users/jeffreysu/Desktop/atc project/liveatc-pipeline-2/recordings/segments/kjfk_gnd_20260305_120001",
+  "segmentCount": 0,
+  "segments": []
+}

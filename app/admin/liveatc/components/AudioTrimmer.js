@@ -181,134 +181,88 @@ export default function AudioTrimmer({ audioUrl, duration: providedDuration, seg
     return (
         <div className={styles.trimmer}>
             {errorMessage && (
-                <div style={{
-                    padding: '8px 12px',
-                    background: '#fee2e2',
-                    color: '#991b1b',
-                    borderRadius: '6px',
-                    marginBottom: '12px',
-                    border: '1px solid #fecaca',
-                    fontSize: '13px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <span>{errorMessage}</span>
-                    <button
-                        onClick={() => setErrorMessage(null)}
-                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '16px', color: '#991b1b', padding: '0 4px' }}
-                    >
-                        ×
-                    </button>
+                <div className={styles.errorBox}>
+                    <span>ERR: {errorMessage}</span>
+                    <button onClick={() => setErrorMessage(null)}>×</button>
                 </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Trim Audio</h4>
-                <button
-                    onClick={addRemoveRegion}
-                    style={{
-                        padding: '6px 12px',
-                        fontSize: '13px',
-                        background: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    + Add Region to Remove
+            <div className={styles.header}>
+                <h4 className={styles.title}>AUDIO_TRIM_OPERATIONS</h4>
+                <button onClick={addRemoveRegion} className={styles.addBtn}>
+                    + ADD_REMOVE_REGION
                 </button>
             </div>
 
             {removeRegions.length === 0 ? (
-                <div style={{ padding: '12px', background: '#f3f4f6', borderRadius: '6px', fontSize: '13px', color: '#666', marginBottom: '12px' }}>
-                    Click "Add Region to Remove" to mark parts of audio to cut out
+                <div className={styles.emptyState}>
+                    NO_REGIONS_MARKED_FOR_REMOVAL. CLICK_ABOVE_TO_START.
                 </div>
             ) : (
                 removeRegions.map((region, index) => (
-                    <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#fff5f7', borderRadius: '6px', border: '1px solid #fecaca' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#dc2626' }}>
-                                Remove Region {index + 1}
+                    <div key={index} className={styles.regionCard}>
+                        <div className={styles.regionHeader}>
+                            <span className={styles.regionLabel}>
+                                REMOVE_MODULE_{index + 1}
                             </span>
-                            <button
-                                onClick={() => removeRegion(index)}
-                                style={{
-                                    padding: '4px 8px',
-                                    fontSize: '12px',
-                                    background: '#ef4444',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Remove
+                            <button onClick={() => removeRegion(index)} className={styles.removeBtn}>
+                                [ TERMINATE ]
                             </button>
                         </div>
 
                         <div className={styles.slider}>
-                            <label>Start: {region.start.toFixed(1)}s</label>
+                            <div className={styles.sliderLabel}>
+                                <span>START_OFFSET</span>
+                                <span>{region.start.toFixed(2)}s</span>
+                            </div>
                             <input
                                 type="range"
                                 min="0"
                                 max={duration}
-                                step="0.1"
+                                step="0.01"
                                 value={region.start}
                                 onChange={(e) => updateRegionStart(index, parseFloat(e.target.value))}
+                                className={styles.rangeInput}
                             />
                         </div>
 
                         <div className={styles.slider}>
-                            <label>End: {region.end.toFixed(1)}s</label>
+                            <div className={styles.sliderLabel}>
+                                <span>END_OFFSET</span>
+                                <span>{region.end.toFixed(2)}s</span>
+                            </div>
                             <input
                                 type="range"
                                 min="0"
                                 max={duration}
-                                step="0.1"
+                                step="0.01"
                                 value={region.end}
                                 onChange={(e) => updateRegionEnd(index, parseFloat(e.target.value))}
+                                className={styles.rangeInput}
                             />
                         </div>
 
-                        <button
-                            onClick={() => playRegion(region)}
-                            style={{
-                                padding: '6px 12px',
-                                fontSize: '12px',
-                                background: '#3b82f6',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                marginTop: '8px',
-                                width: '100%'
-                            }}
-                        >
-                            Preview This Region
+                        <button onClick={() => playRegion(region)} className={styles.previewBtn}>
+                            [ AUDIT_REGION_AUDIO ]
                         </button>
-
-                        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                            Removing: {(region.end - region.start).toFixed(1)}s
-                        </div>
                     </div>
                 ))
             )}
 
             {removeRegions.length > 0 && (
                 <>
-                    <div style={{ marginTop: '12px', padding: '8px', background: '#f0fdf4', borderRadius: '6px', fontSize: '13px' }}>
-                        <strong>Result:</strong> {getKeptDuration().toFixed(1)}s of continuous audio (removed {(duration - getKeptDuration()).toFixed(1)}s)
+                    <div className={styles.resultBox}>
+                        NET_FLIGHT_DATA: {getKeptDuration().toFixed(2)}s
+                        <br />
+                        REDACTED: {(duration - getKeptDuration()).toFixed(2)}s
                     </div>
 
                     <button
                         onClick={handleSaveTrim}
                         disabled={saving}
                         className={styles.saveBtn}
-                        style={{ marginTop: '12px' }}
                     >
-                        {saving ? 'Saving...' : 'Save Trim'}
+                        {saving ? 'EXECUTING_REDACTION...' : 'COMMIT_TRIM_CHANGES'}
                     </button>
                 </>
             )}

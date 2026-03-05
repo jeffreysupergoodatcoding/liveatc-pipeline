@@ -322,7 +322,7 @@ export default function RankOutputsPage() {
                     }
                 }, 500);
             } else {
-                toast(result.message || 'No segments available for ranking', { icon: 'ℹ️' });
+                toast(result.message || 'No segments available for ranking');
                 setSegmentData(null);
             }
         } catch (error) {
@@ -456,7 +456,7 @@ export default function RankOutputsPage() {
             const result = await response.json();
 
             if (result.success) {
-                toast.success('Rankings saved successfully! 🎉');
+                toast.success('Rankings saved successfully');
                 localStorage.removeItem(`ranking-${segmentData.modelOutputId}`);
             } else {
                 toast.error(result.error || 'Failed to save rankings');
@@ -484,8 +484,7 @@ export default function RankOutputsPage() {
         return (
             <div className={styles.emptyContainer}>
                 <div className={styles.emptyCard}>
-                    <div className={styles.emptyIcon}>🎉</div>
-                    <h2 className={styles.emptyTitle}>All Done!</h2>
+                    <h2 className={styles.emptyTitle}>All Done</h2>
                     <p className={styles.emptyMessage}>No segments available for ranking right now.</p>
                     <button onClick={loadNextSegment} className={styles.checkAgainButton}>
                         Check Again
@@ -505,7 +504,7 @@ export default function RankOutputsPage() {
                         <a href="/admin/liveatc" style={{ textDecoration: 'none', color: '#666', fontSize: '1.25rem' }}>
                             ← Back to Admin
                         </a>
-                        <h1 style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif' }}>Variant Test</h1>
+                        <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600 }}>VARIANT QUALITY AUDIT</h1>
                     </div>
                 </div>
 
@@ -557,7 +556,7 @@ export default function RankOutputsPage() {
                             </>
                         ) : (
                             <div className={styles.audioError}>
-                                ⚠️ {segmentData.audioError || 'Audio unavailable'}
+                                Error: {segmentData.audioError || 'Audio unavailable'}
                             </div>
                         )}
                     </div>

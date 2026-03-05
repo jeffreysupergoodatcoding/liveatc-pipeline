@@ -12,80 +12,77 @@ export default function LiveATCAdmin() {
   const [view, setView] = useState('segmentAnalysis');
   const [selectedRecording, setSelectedRecording] = useState(null);
 
+  const navItems = [
+    { id: 'segmentAnalysis', label: 'Segments' },
+    { id: 'recordings', label: 'Recordings' },
+    { id: 'labeledClips', label: 'Ground Truth' },
+    { id: 'upload', label: 'Upload' },
+  ];
+
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>LiveATC Training Pipeline</h1>
-        <nav className={styles.nav}>
-          <button
-            className={`${styles.navButton} ${view === 'recordings' ? styles.active : ''}`}
-            onClick={() => {
-              setView('recordings');
-              setSelectedRecording(null);
-            }}
-          >
-            Recordings
-          </button>
-          <button
-            className={`${styles.navButton} ${view === 'upload' ? styles.active : ''}`}
-            onClick={() => {
-              setView('upload');
-              setSelectedRecording(null);
-            }}
-          >
-            Upload
-          </button>
-          <button
-            className={`${styles.navButton} ${view === 'segmentAnalysis' ? styles.active : ''}`}
-            onClick={() => {
-              setView('segmentAnalysis');
-              setSelectedRecording(null);
-            }}
-          >
-            Segment Analysis
-          </button>
-          <button
-            className={`${styles.navButton} ${view === 'labeledClips' ? styles.active : ''}`}
-            onClick={() => {
-              setView('labeledClips');
-              setSelectedRecording(null);
-            }}
-          >
-            Labeled Clips
-          </button>
-          <a
-            href="/rank-outputs"
-            className={styles.navButton}
-            style={{ textDecoration: 'none' }}
-          >
-            Variant Test
-          </a>
-        </nav>
-      </header>
+    <div className={styles.dashboardLayout}>
+      <aside className={styles.sidebar}>
+        <div className={styles.navGroup}>
+          <span className={styles.navHeader}>OPERATIONS</span>
+          <nav className={styles.sideNav}>
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                className={`${styles.sideButton} ${view === item.id ? styles.sideActive : ''}`}
+                onClick={() => {
+                  setView(item.id);
+                  setSelectedRecording(null);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </div>
 
-      <main className={styles.main}>
-        {view === 'segmentAnalysis' && <AllSegments />}
+        <div className={styles.navGroup} style={{ marginTop: '24px' }}>
+          <span className={styles.navHeader}>RESOURCES</span>
+          <nav className={styles.sideNav}>
+            <a href="/rank-outputs" className={styles.sideButton}>
+              VARIANTS
+            </a>
+          </nav>
+        </div>
+      </aside>
 
-        {view === 'labeledClips' && <LabeledClipsList />}
+      <main className={styles.contentArea}>
+        <header className={styles.contentHeader}>
+          <div className={styles.breadcrumb}>
+            <span>OPERATIONS</span>
+            <span className={styles.separator}>/</span>
+            <span className={styles.currentView}>{navItems.find(n => n.id === view)?.label || 'DETAILS'}</span>
+          </div>
+        </header>
 
-        {view === 'recordings' && !selectedRecording && (
-          <RecordingsList onSelectRecording={(recording) => {
-            setSelectedRecording(recording);
-            setView('segments');
-          }} />
-        )}
+        <div className={styles.scrollContainer}>
+          {view === 'segmentAnalysis' && <AllSegments />}
 
-        {view === 'segments' && selectedRecording && (
-          <SegmentsList
-            recording={selectedRecording}
-            onBack={() => {
-              setSelectedRecording(null);
-              setView('recordings');
-            }}
-          />
-        )}
+          {view === 'labeledClips' && <LabeledClipsList />}
 
-        {view === 'upload' && <AudioUpload />}
+          {view === 'recordings' && !selectedRecording && (
+            <RecordingsList onSelectRecording={(recording) => {
+              setSelectedRecording(recording);
+              setView('segments');
+            }} />
+          )}
+
+          {view === 'segments' && selectedRecording && (
+            <SegmentsList
+              recording={selectedRecording}
+              onBack={() => {
+                setSelectedRecording(null);
+                setView('recordings');
+              }}
+            />
+          )}
+
+          {view === 'upload' && <AudioUpload />}
+        </div>
       </main>
     </div>
   );

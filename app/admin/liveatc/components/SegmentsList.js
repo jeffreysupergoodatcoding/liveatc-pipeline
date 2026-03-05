@@ -157,9 +157,9 @@ export default function SegmentsList({ recording, onBack }) {
       }
 
       if (result.status === 'high_confidence') {
-        alert(`✅ Success!\n\nGenerated ${result.variations.length} variations\nConfidence: ${(result.confidence * 100).toFixed(2)}%\nStatus: Ready for ranking`);
+        alert(`Success!\n\nGenerated ${result.variations.length} variations\nConfidence: ${(result.confidence * 100).toFixed(2)}%\nStatus: Ready for ranking`);
       } else {
-        alert(`⚠️ Low Confidence\n\nConfidence: ${(result.confidence * 100).toFixed(2)}%\nStatus: Needs human review`);
+        alert(`Low Confidence\n\nConfidence: ${(result.confidence * 100).toFixed(2)}%\nStatus: Needs human review`);
       }
 
       await fetchSegments();
@@ -334,7 +334,7 @@ export default function SegmentsList({ recording, onBack }) {
                         className={segment.status === 'pending' ? styles.activeButton : styles.inactiveButton}
                         title={segment.status === 'pending' ? "Remove from analysis queue" : "Add to analysis queue"}
                       >
-                        {segment.status === 'pending' ? '✓ Queued' : 'Queue'}
+                        {segment.status === 'pending' ? 'Queued' : 'Queue'}
                       </button>
                     </td>
                     <td>
@@ -344,7 +344,7 @@ export default function SegmentsList({ recording, onBack }) {
                           className={styles.playButton}
                           title="Play"
                         >
-                          {playingSegment?.id === segment.id ? '⏸' : '▶'}
+                          {playingSegment?.id === segment.id ? 'PAUSE' : 'PLAY'}
                         </button>
                         <button
                           onClick={() => updateSegmentStatus([segment.id], 'active')}
@@ -365,7 +365,7 @@ export default function SegmentsList({ recording, onBack }) {
                           className={styles.deleteButton}
                           title="Delete"
                         >
-                          🗑
+                          DELETE
                         </button>
                       </div>
                     </td>

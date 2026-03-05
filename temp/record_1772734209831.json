@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "outputPath": "/Users/jeffreysu/Desktop/atc project/liveatc-pipeline-2/recordings/raw/kjfk_gnd_20260305_120001.mp3",
+  "filename": "kjfk_gnd_20260305_120001.mp3",
+  "airport": "KJFK",
+  "facility": "ground",
+  "url": "http://d.liveatc.net/kjfk_gnd",
+  "duration": 600,
+  "recordedAt": "2026-03-05T18:10:08.765Z"
+}

@@ -180,7 +180,7 @@ export default function AllSegments() {
 
             await fetchSegments();
 
-            alert(`✓ Analysis complete!\n\nProcessed: ${processedCount} segments\n${errorCount > 0 ? `Errors: ${errorCount} segments` : ''}`);
+            alert(`Analysis complete!\n\nProcessed: ${processedCount} segments\n${errorCount > 0 ? `Errors: ${errorCount} segments` : ''}`);
         } catch (error) {
             console.error('Error running analysis:', error);
             alert(`Failed to run analysis: ${error.message}`);
@@ -220,7 +220,7 @@ export default function AllSegments() {
                     disabled={analyzing || queuedSegments.length === 0}
                     className={styles.runAnalysisButton}
                 >
-                    {analyzing ? 'Running Analysis...' : '▶ Run Analysis'}
+                    {analyzing ? 'Running Analysis...' : 'Run Analysis'}
                 </button>
             </div>
 
@@ -319,7 +319,7 @@ export default function AllSegments() {
                 </div>
 
                 <button className={styles.refreshButton} onClick={fetchSegments}>
-                    ↻ Refresh
+                    Refresh
                 </button>
             </div>
 
@@ -410,7 +410,7 @@ function SegmentCard({ segment, selected, onClick, onToggleQueue }) {
             <div className={styles.cardFooter}>
                 <span className={styles.duration}>{segment.duration_seconds?.toFixed(1)}s</span>
                 {!isAnalyzed && <span className={styles.notAnalyzed}>Not analyzed</span>}
-                {isAnalyzed && <span className={styles.analyzedBadge}>✓ Analyzed</span>}
+                {isAnalyzed && <span className={styles.analyzedBadge}>Analyzed</span>}
                 {/* Only show queue button for non-analyzed segments */}
                 {!isAnalyzed && (
                     <button
@@ -569,7 +569,7 @@ function SegmentDetails({ segment, onClose, onRefresh, onToggleQueue }) {
                 throw new Error(errorData.error || 'Failed to save label');
             }
 
-            alert('✓ Label saved successfully!');
+            alert('Label saved successfully!');
             setIsLabeling(false);
             setRemoveRegions([]);
             if (onRefresh) onRefresh();
@@ -596,7 +596,7 @@ function SegmentDetails({ segment, onClose, onRefresh, onToggleQueue }) {
                 throw new Error(result.error || 'Failed to generate variants');
             }
 
-            alert(`✓ Generated ${result.variations?.length || 0} variants! You can now view them in the Variant Test.`);
+            alert(`Generated ${result.variations?.length || 0} variants! You can now view them in the Variant Test.`);
             await fetchModelOutputs();
             if (onRefresh) onRefresh();
         } catch (error) {
@@ -658,7 +658,7 @@ function SegmentDetails({ segment, onClose, onRefresh, onToggleQueue }) {
                 {/* Analyzed indicator */}
                 {isAnalyzed && (
                     <section className={styles.analyzedSection}>
-                        <span className={styles.analyzedIndicator}>✓ This segment has been analyzed</span>
+                        <span className={styles.analyzedIndicator}>This segment has been analyzed</span>
                     </section>
                 )}
 
@@ -749,12 +749,13 @@ function SegmentDetails({ segment, onClose, onRefresh, onToggleQueue }) {
                             <div className={styles.wordDisplay}>
                                 {segment.transcription_text.split(/\s+/).map((word, index) => {
                                     const confidence = getWordConfidence(index);
-                                    const bgColor = getConfidenceColor(confidence);
+                                    const confidenceClass = confidence !== null ?
+                                        (confidence < 0.7 ? styles.lowConfWord :
+                                            confidence < 0.9 ? styles.medConfWord : '') : '';
                                     return (
                                         <span
                                             key={index}
-                                            className={styles.word}
-                                            style={{ backgroundColor: bgColor }}
+                                            className={`${styles.word} ${confidenceClass}`}
                                             title={confidence !== null ? `Confidence: ${(confidence * 100).toFixed(1)}%` : word}
                                         >
                                             {word}
@@ -764,8 +765,8 @@ function SegmentDetails({ segment, onClose, onRefresh, onToggleQueue }) {
                             </div>
                             {segment.transcription_confidence && (
                                 <div className={styles.overallConfidence}>
-                                    Overall: {(segment.transcription_confidence * 100).toFixed(1)}%
-                                    {wordConfidences.length > 0 && ' • Hover over words to see individual scores'}
+                                    <span className="data-label">Net Confidence:</span>
+                                    <span className={styles.monoValue}> {(segment.transcription_confidence * 100).toFixed(1)}%</span>
                                 </div>
                             )}
                         </div>
@@ -827,7 +828,7 @@ function SegmentDetails({ segment, onClose, onRefresh, onToggleQueue }) {
                                     onClick={() => setShowTrimmer(!showTrimmer)}
                                     className={styles.trimToggle}
                                 >
-                                    {showTrimmer ? '✕ Hide Trimmer' : '✂️ Trim Audio'}
+                                    {showTrimmer ? '✕ Hide Trimmer' : 'Trim Audio'}
                                 </button>
                                 {showTrimmer && (
                                     <AudioTrimmer
@@ -852,7 +853,7 @@ function SegmentDetails({ segment, onClose, onRefresh, onToggleQueue }) {
                                 placeholder="Type or paste the correct transcription here. Use [UNKNOWN] for unclear portions."
                                 className={styles.transcriptionInput}
                             />
-                            <p className={styles.inputHelp}>💡 Use [UNKNOWN] for unclear words</p>
+                            <p className={styles.inputHelp}>Use [UNKNOWN] for unclear words</p>
                         </div>
 
                         <div className={styles.inputGroup}>
@@ -871,7 +872,7 @@ function SegmentDetails({ segment, onClose, onRefresh, onToggleQueue }) {
                                 disabled={saving || !manualTranscription.trim()}
                                 className={styles.saveButton}
                             >
-                                {saving ? 'Saving...' : '✓ Save Label'}
+                                {saving ? 'Saving...' : 'Save Label'}
                             </button>
                             <button
                                 onClick={() => {
